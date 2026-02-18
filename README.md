@@ -125,16 +125,7 @@ Lista completa configurada em `SERVER_CONFIG.STAFF_ROLES`
 
 ## 📊 Banco de Dados
 
-O bot utiliza SQLite com as seguintes tabelas:
-- `user_stats` - Estatísticas de usuários
-- `user_history` - Histórico de alterações
-- `recruitment` - Sistema de recrutamento
-- `guild_config` - Configurações do servidor
-- `moderation_logs` - Logs de moderação
-- `channel_backups` - Backup de canais
-- `role_backups` - Backup de cargos
-- `automod_infractions` - Infrações do AutoMod
-- `raid_events` - Eventos suspeitos
+O bot utiliza PostgreSQL (Neon) via Prisma ORM.
 
 ## 🔒 Segurança
 

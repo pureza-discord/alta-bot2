@@ -3,7 +3,6 @@ import path from "path";
 import chalk from "chalk";
 import winston from "winston";
 import { buildEmbed, DEFAULT_EMBED_COLOR } from "./embed.js";
-import { db } from "../database.js";
 import { logAudit } from "../services/core/auditLogService.js";
 import { sendAlert } from "./alerts.js";
 
@@ -106,87 +105,42 @@ export function registerGlobalErrorHandlers() {
 
 export class Logger {
     static async logModeration(guildId, userId, moderatorId, action, reason = null, duration = null) {
-        return new Promise((resolve, reject) => {
-            db.run(
-                `INSERT INTO moderation_logs 
-                 (guild_id, user_id, moderator_id, action, reason, duration)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [guildId, userId, moderatorId, action, reason, duration],
-                function(err) {
-                    if (err) {
-                        console.error('Erro ao salvar log de moderação:', err);
-                        reject(err);
-                    } else {
-                        logAudit({
-                            guildId,
-                            action: `moderation.${action}`,
-                            actorId: moderatorId,
-                            targetId: userId,
-                            source: "moderation",
-                            severity: action === "ban" ? "warn" : "info",
-                            meta: { reason, duration }
-                        });
-                        resolve(this.lastID);
-                    }
-                }
-            );
+        await logAudit({
+            guildId,
+            action: `moderation.${action}`,
+            actorId: moderatorId,
+            targetId: userId,
+            source: "moderation",
+            severity: action === "ban" ? "warn" : "info",
+            meta: { reason, duration }
         });
+        return true;
     }
     
     static async logAutomod(guildId, userId, infractionType, content = null) {
-        return new Promise((resolve, reject) => {
-            db.run(
-                `INSERT INTO automod_infractions 
-                 (guild_id, user_id, infraction_type, content)
-                 VALUES (?, ?, ?, ?)`,
-                [guildId, userId, infractionType, content],
-                function(err) {
-                    if (err) {
-                        console.error('Erro ao salvar infração do automod:', err);
-                        reject(err);
-                    } else {
-                        logAudit({
-                            guildId,
-                            action: "automod.infraction",
-                            actorId: null,
-                            targetId: userId,
-                            source: "automod",
-                            severity: "warn",
-                            meta: { infractionType, content }
-                        });
-                        resolve(this.lastID);
-                    }
-                }
-            );
+        await logAudit({
+            guildId,
+            action: "automod.infraction",
+            actorId: null,
+            targetId: userId,
+            source: "automod",
+            severity: "warn",
+            meta: { infractionType, content }
         });
+        return true;
     }
     
     static async logRaidEvent(guildId, userId, eventType, targetId = null) {
-        return new Promise((resolve, reject) => {
-            db.run(
-                `INSERT INTO raid_events 
-                 (guild_id, user_id, event_type, target_id)
-                 VALUES (?, ?, ?, ?)`,
-                [guildId, userId, eventType, targetId],
-                function(err) {
-                    if (err) {
-                        console.error('Erro ao salvar evento de raid:', err);
-                        reject(err);
-                    } else {
-                        logAudit({
-                            guildId,
-                            action: "antiraid.event",
-                            actorId: null,
-                            targetId: userId,
-                            source: "antiraid",
-                            severity: "warn",
-                            meta: { eventType, targetId }
-                        });
-                        resolve(this.lastID);
-                    }
-                }
-            );
+        await logAudit({
+            guildId,
+            action: "antiraid.event",
+            actorId: null,
+            targetId: userId,
+            source: "antiraid",
+            severity: "warn",
+            meta: { eventType, targetId }
         });
+        return true;
     }
     
     static createModerationEmbed(action, user, moderator, reason, duration = null) {

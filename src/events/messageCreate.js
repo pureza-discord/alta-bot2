@@ -1,8 +1,5 @@
-import { db } from "../database.js";
 import { addMessageXP } from "../services/xpService.js";
-import { trackMessage } from "../services/chatAnalyticsService.js";
-import { onMessage as onMessageSql } from "../systems/xpSystem.js";
-import { getOrCreateUser, addMessages, getUser } from "../services/core/userService.js";
+import { getOrCreateUser, getUser } from "../services/core/userService.js";
 import { checkPromotion } from "../services/core/promotionService.js";
 import { addWarPoints as addCoreWarPoints } from "../services/core/warService.js";
 import { trackMessage as trackMessageMetrics } from "../services/core/messageMetricsService.js";
@@ -20,29 +17,11 @@ export async function execute(message, client) {
         if (wasBlocked) return; // Mensagem foi bloqueada pelo AutoMod
     }
 
-    // Atualizar estatísticas de mensagens
-    db.run(
-        `INSERT INTO user_stats (user_id, guild_id, messages)
-         VALUES (?, ?, 1)
-         ON CONFLICT(user_id, guild_id)
-         DO UPDATE SET messages = messages + 1`,
-        [message.author.id, message.guild.id],
-        (err) => {
-            if (err) console.error("Erro ao atualizar mensagens:", err);
-        }
-    );
-
     // Sistema de XP por mensagem (cooldown interno)
     try {
         await addMessageXP(message.author.id, message.guild.id);
     } catch (error) {
         console.error("Erro ao adicionar XP:", error);
-    }
-
-    try {
-        await onMessageSql(message);
-    } catch (error) {
-        console.error("Erro ao atualizar XP no SQLite:", error);
     }
 
     let coreUser = null;
@@ -51,7 +30,6 @@ export async function execute(message, client) {
             username: message.author.username,
             avatar: message.author.displayAvatarURL()
         });
-        await addMessages(message.guild.id, message.author.id, 1);
         coreUser = await getUser(message.guild.id, message.author.id);
         if (coreUser?.distritoId) {
             await addCoreWarPoints(message.guild.id, coreUser.distritoId, 1);
@@ -84,11 +62,6 @@ export async function execute(message, client) {
         console.error("Erro ao atualizar progresso de missões/contratos:", error);
     }
 
-    try {
-        await trackMessage(message);
-    } catch (error) {
-        console.error("Erro ao registrar chat analytics:", error);
-    }
 
     // Processar comandos com prefixo "."
     if (!message.content.startsWith(".")) return;

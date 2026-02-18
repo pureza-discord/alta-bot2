@@ -1,6 +1,6 @@
 import { PermissionsBitField, ChannelType } from 'discord.js';
 import { buildEmbed } from '../utils/embed.js';
-import { db } from '../database.js';
+import { prisma } from '../services/prisma.js';
 import { Logger } from '../utils/logger.js';
 
 export class BackupSystem {
@@ -48,14 +48,8 @@ export class BackupSystem {
     async backupChannels(guild) {
         const channels = guild.channels.cache;
         let backedUpCount = 0;
-        
-        // Limpar backups antigos de canais
-        await new Promise((resolve, reject) => {
-            db.run('DELETE FROM channel_backups WHERE guild_id = ?', [guild.id], (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+
+        await prisma.channelBackup.deleteMany({ where: { guildId: guild.id } });
         
         for (const [channelId, channel] of channels) {
             try {
@@ -65,26 +59,17 @@ export class BackupSystem {
                     allow: overwrite.allow.toArray(),
                     deny: overwrite.deny.toArray()
                 }));
-                
-                await new Promise((resolve, reject) => {
-                    db.run(
-                        `INSERT INTO channel_backups 
-                         (guild_id, channel_id, channel_name, channel_type, category_id, position, permissions)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                        [
-                            guild.id,
-                            channelId,
-                            channel.name,
-                            channel.type,
-                            channel.parentId,
-                            channel.position,
-                            JSON.stringify(permissions)
-                        ],
-                        (err) => {
-                            if (err) reject(err);
-                            else resolve();
-                        }
-                    );
+
+                await prisma.channelBackup.create({
+                    data: {
+                        guildId: guild.id,
+                        channelId,
+                        name: channel.name,
+                        type: channel.type,
+                        categoryId: channel.parentId,
+                        position: channel.position,
+                        permissions
+                    }
                 });
                 
                 backedUpCount++;
@@ -99,40 +84,25 @@ export class BackupSystem {
     async backupRoles(guild) {
         const roles = guild.roles.cache;
         let backedUpCount = 0;
-        
-        // Limpar backups antigos de cargos
-        await new Promise((resolve, reject) => {
-            db.run('DELETE FROM role_backups WHERE guild_id = ?', [guild.id], (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+
+        await prisma.roleBackup.deleteMany({ where: { guildId: guild.id } });
         
         for (const [roleId, role] of roles) {
             // Pular o cargo @everyone
             if (roleId === guild.id) continue;
             
             try {
-                await new Promise((resolve, reject) => {
-                    db.run(
-                        `INSERT INTO role_backups 
-                         (guild_id, role_id, role_name, color, permissions, position, mentionable, hoist)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [
-                            guild.id,
-                            roleId,
-                            role.name,
-                            role.color,
-                            role.permissions.bitfield.toString(),
-                            role.position,
-                            role.mentionable ? 1 : 0,
-                            role.hoist ? 1 : 0
-                        ],
-                        (err) => {
-                            if (err) reject(err);
-                            else resolve();
-                        }
-                    );
+                await prisma.roleBackup.create({
+                    data: {
+                        guildId: guild.id,
+                        roleId,
+                        name: role.name,
+                        color: role.color,
+                        permissions: role.permissions.bitfield.toString(),
+                        position: role.position,
+                        mentionable: role.mentionable,
+                        hoist: role.hoist
+                    }
                 });
                 
                 backedUpCount++;
@@ -193,17 +163,10 @@ export class BackupSystem {
     
     async restoreRoles(guild) {
         const results = { created: 0, failed: 0 };
-        
-        // Buscar backup dos cargos
-        const roleBackups = await new Promise((resolve, reject) => {
-            db.all(
-                'SELECT * FROM role_backups WHERE guild_id = ? ORDER BY position DESC',
-                [guild.id],
-                (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                }
-            );
+
+        const roleBackups = await prisma.roleBackup.findMany({
+            where: { guildId: guild.id },
+            orderBy: { position: "desc" }
         });
         
         if (roleBackups.length === 0) {
@@ -214,27 +177,27 @@ export class BackupSystem {
         for (const roleBackup of roleBackups) {
             try {
                 // Verificar se o cargo já existe
-                const existingRole = guild.roles.cache.get(roleBackup.role_id);
+                const existingRole = guild.roles.cache.get(roleBackup.roleId);
                 if (existingRole) continue;
                 
                 // Criar o cargo
                 const createdRole = await guild.roles.create({
-                    name: roleBackup.role_name,
+                    name: roleBackup.name,
                     color: roleBackup.color,
                     permissions: BigInt(roleBackup.permissions),
-                    mentionable: roleBackup.mentionable === 1,
-                    hoist: roleBackup.hoist === 1,
+                    mentionable: roleBackup.mentionable,
+                    hoist: roleBackup.hoist,
                     reason: 'Restore de backup'
                 });
                 
                 results.created++;
-                console.log(`✅ Cargo restaurado: ${roleBackup.role_name}`);
+                console.log(`✅ Cargo restaurado: ${roleBackup.name}`);
                 
                 // Pequena pausa para evitar rate limiting
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
             } catch (error) {
-                console.error(`❌ Erro ao restaurar cargo ${roleBackup.role_name}:`, error);
+                console.error(`❌ Erro ao restaurar cargo ${roleBackup.name}:`, error);
                 results.failed++;
             }
         }
@@ -244,17 +207,10 @@ export class BackupSystem {
     
     async restoreChannels(guild) {
         const results = { created: 0, failed: 0 };
-        
-        // Buscar backup dos canais
-        const channelBackups = await new Promise((resolve, reject) => {
-            db.all(
-                'SELECT * FROM channel_backups WHERE guild_id = ? ORDER BY position ASC',
-                [guild.id],
-                (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                }
-            );
+
+        const channelBackups = await prisma.channelBackup.findMany({
+            where: { guildId: guild.id },
+            orderBy: { position: "asc" }
         });
         
         if (channelBackups.length === 0) {
@@ -263,29 +219,29 @@ export class BackupSystem {
         }
         
         // Separar categorias e canais normais
-        const categories = channelBackups.filter(ch => ch.channel_type === ChannelType.GuildCategory);
-        const channels = channelBackups.filter(ch => ch.channel_type !== ChannelType.GuildCategory);
+        const categories = channelBackups.filter(ch => ch.type === ChannelType.GuildCategory);
+        const channels = channelBackups.filter(ch => ch.type !== ChannelType.GuildCategory);
         
         // Criar categorias primeiro
         for (const categoryBackup of categories) {
             try {
-                const existingCategory = guild.channels.cache.get(categoryBackup.channel_id);
+                const existingCategory = guild.channels.cache.get(categoryBackup.channelId);
                 if (existingCategory) continue;
                 
                 await guild.channels.create({
-                    name: categoryBackup.channel_name,
+                    name: categoryBackup.name,
                     type: ChannelType.GuildCategory,
                     position: categoryBackup.position,
                     reason: 'Restore de backup'
                 });
                 
                 results.created++;
-                console.log(`✅ Categoria restaurada: ${categoryBackup.channel_name}`);
+                console.log(`✅ Categoria restaurada: ${categoryBackup.name}`);
                 
                 await new Promise(resolve => setTimeout(resolve, 200));
                 
             } catch (error) {
-                console.error(`❌ Erro ao restaurar categoria ${categoryBackup.channel_name}:`, error);
+                console.error(`❌ Erro ao restaurar categoria ${categoryBackup.name}:`, error);
                 results.failed++;
             }
         }
@@ -293,15 +249,15 @@ export class BackupSystem {
         // Criar canais normais
         for (const channelBackup of channels) {
             try {
-                const existingChannel = guild.channels.cache.get(channelBackup.channel_id);
+                const existingChannel = guild.channels.cache.get(channelBackup.channelId);
                 if (existingChannel) continue;
                 
-                const parent = channelBackup.category_id ? 
-                    guild.channels.cache.get(channelBackup.category_id) : null;
+                const parent = channelBackup.categoryId ?
+                    guild.channels.cache.get(channelBackup.categoryId) : null;
                 
                 const channelOptions = {
-                    name: channelBackup.channel_name,
-                    type: channelBackup.channel_type,
+                    name: channelBackup.name,
+                    type: channelBackup.type,
                     parent: parent,
                     position: channelBackup.position,
                     reason: 'Restore de backup'
@@ -312,7 +268,7 @@ export class BackupSystem {
                 // Restaurar permissões se existirem
                 if (channelBackup.permissions) {
                     try {
-                        const permissions = JSON.parse(channelBackup.permissions);
+                        const permissions = channelBackup.permissions;
                         for (const perm of permissions) {
                             const target = perm.type === 0 ? 
                                 guild.roles.cache.get(perm.id) : 
@@ -331,12 +287,12 @@ export class BackupSystem {
                 }
                 
                 results.created++;
-                console.log(`✅ Canal restaurado: ${channelBackup.channel_name}`);
+                console.log(`✅ Canal restaurado: ${channelBackup.name}`);
                 
                 await new Promise(resolve => setTimeout(resolve, 300));
                 
             } catch (error) {
-                console.error(`❌ Erro ao restaurar canal ${channelBackup.channel_name}:`, error);
+                console.error(`❌ Erro ao restaurar canal ${channelBackup.name}:`, error);
                 results.failed++;
             }
         }
@@ -345,43 +301,17 @@ export class BackupSystem {
     }
     
     async getBackupInfo(guildId) {
-        const channelCount = await new Promise((resolve, reject) => {
-            db.get(
-                'SELECT COUNT(*) as count FROM channel_backups WHERE guild_id = ?',
-                [guildId],
-                (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row?.count || 0);
-                }
-            );
-        });
-        
-        const roleCount = await new Promise((resolve, reject) => {
-            db.get(
-                'SELECT COUNT(*) as count FROM role_backups WHERE guild_id = ?',
-                [guildId],
-                (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row?.count || 0);
-                }
-            );
-        });
-        
-        const lastBackup = await new Promise((resolve, reject) => {
-            db.get(
-                'SELECT MAX(created_at) as last_backup FROM channel_backups WHERE guild_id = ?',
-                [guildId],
-                (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row?.last_backup);
-                }
-            );
+        const channelCount = await prisma.channelBackup.count({ where: { guildId } });
+        const roleCount = await prisma.roleBackup.count({ where: { guildId } });
+        const lastBackup = await prisma.channelBackup.findFirst({
+            where: { guildId },
+            orderBy: { createdAt: "desc" }
         });
         
         return {
             channels: channelCount,
             roles: roleCount,
-            lastBackup: lastBackup ? new Date(lastBackup * 1000) : null
+            lastBackup: lastBackup?.createdAt || null
         };
     }
     

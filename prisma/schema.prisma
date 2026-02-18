@@ -16,6 +16,10 @@ model User {
   eventos       Int      @default(0)
   recrutas      Int      @default(0)
   guerraPontos  Int      @default(0)
+  xpTotal       Int      @default(0)
+  weeklyXP      Int      @default(0)
+  seasonalXP    Int      @default(0)
+  level         Int      @default(0)
   meritPoints   Int      @default(0)
   meritStars    Int      @default(0)
   nivel         String   @default("Capanga")
@@ -23,6 +27,8 @@ model User {
   dinheiro      Int      @default(0)
   distritoId    String?
   temporadaId   String?
+  lastMessageAt DateTime?
+  streakDays    Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -261,4 +267,35 @@ model VipAccess {
   @@unique([guildId, userId])
   @@index([guildId, active])
   @@index([guildId, expiresAt])
+}
+
+model ChannelBackup {
+  id          String   @id @default(cuid())
+  guildId     String
+  channelId   String
+  name        String
+  type        Int
+  categoryId  String?
+  position    Int
+  permissions Json?
+  createdAt   DateTime @default(now())
+
+  @@index([guildId, createdAt])
+  @@index([guildId, channelId])
+}
+
+model RoleBackup {
+  id          String   @id @default(cuid())
+  guildId     String
+  roleId      String
+  name        String
+  color       Int
+  permissions String
+  position    Int
+  mentionable Boolean
+  hoist       Boolean
+  createdAt   DateTime @default(now())
+
+  @@index([guildId, createdAt])
+  @@index([guildId, roleId])
 }

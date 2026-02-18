@@ -1,9 +1,8 @@
-import { User } from "../models/User.js";
-import { addWarPoints } from "./warService.js";
+import { prisma } from "./prisma.js";
+import { addWarPoints } from "./core/warService.js";
 import { config } from "../config/index.js";
 import { info } from "../utils/logger.js";
 import { checkIfBlocked } from "./core/punishmentService.js";
-import { registerTopXp } from "./hallOfFameService.js";
 import { createMedal, awardMedal } from "./medalService.js";
 import { getVipStatus } from "./core/vipService.js";
 
@@ -47,45 +46,57 @@ export async function addMessageXP(userId, guildId) {
 
     cooldowns.set(key, now);
 
-    const previous = await User.findOne({ userId, guildId });
+    const previous = await prisma.user.findUnique({
+        where: { guildId_discordId: { guildId, discordId: userId } }
+    });
     const vip = await getVipStatus(guildId, userId);
     const currentLevel = previous?.level || 0;
     const bonusLevel = Math.min(currentLevel, MAX_LEVEL_FOR_BONUS);
     const baseXp = MESSAGE_XP * (1 + bonusLevel * LEVEL_XP_BONUS);
     const awardedXp = vip.active ? Math.ceil(baseXp * 1.2) : Math.ceil(baseXp);
-    const user = await User.findOneAndUpdate(
-        { userId, guildId },
-        {
-            $inc: {
-                xpTotal: awardedXp,
-                weeklyXP: awardedXp,
-                seasonalXP: awardedXp,
-                totalMessages: 1
-            },
-            $set: { lastMessageAt: new Date(now) },
-            $setOnInsert: { userId, guildId }
+    const user = await prisma.user.upsert({
+        where: { guildId_discordId: { guildId, discordId: userId } },
+        update: {
+            xpTotal: { increment: awardedXp },
+            weeklyXP: { increment: awardedXp },
+            seasonalXP: { increment: awardedXp },
+            mensagens: { increment: 1 },
+            lastMessageAt: new Date(now)
         },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+        create: {
+            guildId,
+            discordId: userId,
+            username: "unknown",
+            xpTotal: awardedXp,
+            weeklyXP: awardedXp,
+            seasonalXP: awardedXp,
+            mensagens: 1,
+            lastMessageAt: new Date(now)
+        }
+    });
 
     const levelResult = await checkLevelUp(user);
 
-    if (user.districtId) {
-        await addWarPoints(user.districtId, 1, "message");
+    if (user.distritoId) {
+        await addWarPoints(guildId, user.distritoId, 1);
     }
-
-    await registerTopXp(userId, awardedXp);
 
     if (previous?.lastMessageAt) {
         const diff = now - new Date(previous.lastMessageAt).getTime();
         const oneDay = 24 * 60 * 60 * 1000;
+        let streakDays = user.streakDays;
         if (diff >= oneDay && diff <= 2 * oneDay) {
-            user.streakDays += 1;
+            streakDays += 1;
         } else if (diff > 2 * oneDay) {
-            user.streakDays = 1;
+            streakDays = 1;
         }
-        await user.save();
-        if (user.streakDays >= 7) {
+        if (streakDays !== user.streakDays) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { streakDays }
+            });
+        }
+        if (streakDays >= 7) {
             const medal = await createMedal("7 dias streak", "🔥");
             await awardMedal(userId, guildId, medal.id);
         }
@@ -100,7 +111,9 @@ export async function addEventXP(userId, guildId, baseXp = 50) {
         return { awarded: false, reason: "blocked" };
     }
 
-    const current = await User.findOne({ userId, guildId });
+    const current = await prisma.user.findUnique({
+        where: { guildId_discordId: { guildId, discordId: userId } }
+    });
     const currentLevel = current?.level || 0;
     const bonusLevel = Math.min(currentLevel, MAX_LEVEL_FOR_BONUS);
     const baseAward = baseXp * (1 + bonusLevel * LEVEL_XP_BONUS);
@@ -108,31 +121,35 @@ export async function addEventXP(userId, guildId, baseXp = 50) {
     const vip = await getVipStatus(guildId, userId);
     const awardedXp = vip.active ? Math.ceil(baseAward * 1.2) : Math.ceil(baseAward);
 
-    const user = await User.findOneAndUpdate(
-        { userId, guildId },
-        {
-            $inc: {
-                xpTotal: awardedXp,
-                weeklyXP: awardedXp,
-                seasonalXP: awardedXp
-            },
-            $setOnInsert: { userId, guildId }
+    const user = await prisma.user.upsert({
+        where: { guildId_discordId: { guildId, discordId: userId } },
+        update: {
+            xpTotal: { increment: awardedXp },
+            weeklyXP: { increment: awardedXp },
+            seasonalXP: { increment: awardedXp }
         },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+        create: {
+            guildId,
+            discordId: userId,
+            username: "unknown",
+            xpTotal: awardedXp,
+            weeklyXP: awardedXp,
+            seasonalXP: awardedXp
+        }
+    });
 
     const levelResult = await checkLevelUp(user);
-    await registerTopXp(userId, awardedXp);
-
     return { awarded: true, levelUp: levelResult.leveledUp, user, awardedXp };
 }
 
 export async function checkLevelUp(user) {
     const newLevel = calculateLevel(user.xpTotal);
     if (newLevel > user.level) {
-        user.level = newLevel;
-        await user.save();
-        info(`Usuário ${user.userId} subiu para o nível ${newLevel}.`);
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { level: newLevel }
+        });
+        info(`Usuário ${user.discordId} subiu para o nível ${newLevel}.`);
         return { leveledUp: true, level: newLevel };
     }
     return { leveledUp: false, level: user.level };
@@ -149,7 +166,9 @@ export async function addVoiceXP(userId, guildId, secondsInCall) {
         return { awarded: false, reason: "too_short" };
     }
 
-    const current = await User.findOne({ userId, guildId });
+    const current = await prisma.user.findUnique({
+        where: { guildId_discordId: { guildId, discordId: userId } }
+    });
     const currentLevel = current?.level || 0;
     const bonusLevel = Math.min(currentLevel, MAX_LEVEL_FOR_BONUS);
     const baseXp = VOICE_XP_PER_MINUTE * minutes * (1 + bonusLevel * LEVEL_XP_BONUS);
@@ -157,22 +176,24 @@ export async function addVoiceXP(userId, guildId, secondsInCall) {
     const vip = await getVipStatus(guildId, userId);
     const awardedXp = vip.active ? Math.ceil(baseXp * 1.2) : Math.ceil(baseXp);
 
-    const user = await User.findOneAndUpdate(
-        { userId, guildId },
-        {
-            $inc: {
-                xpTotal: awardedXp,
-                weeklyXP: awardedXp,
-                seasonalXP: awardedXp
-            },
-            $setOnInsert: { userId, guildId }
+    const user = await prisma.user.upsert({
+        where: { guildId_discordId: { guildId, discordId: userId } },
+        update: {
+            xpTotal: { increment: awardedXp },
+            weeklyXP: { increment: awardedXp },
+            seasonalXP: { increment: awardedXp }
         },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+        create: {
+            guildId,
+            discordId: userId,
+            username: "unknown",
+            xpTotal: awardedXp,
+            weeklyXP: awardedXp,
+            seasonalXP: awardedXp
+        }
+    });
 
     const levelResult = await checkLevelUp(user);
-    await registerTopXp(userId, awardedXp);
-
     return { awarded: true, levelUp: levelResult.leveledUp, user, minutes, awardedXp };
 }
 

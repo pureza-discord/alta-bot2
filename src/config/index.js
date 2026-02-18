@@ -4,7 +4,6 @@ dotenv.config();
 
 const config = {
     token: process.env.DISCORD_TOKEN || "",
-    mongoURI: process.env.MONGO_URI || "",
     guildId: process.env.DISCORD_GUILD_ID || "",
     seasonDuration: Number(process.env.SEASON_DURATION || 30),
     warDuration: Number(process.env.WAR_DURATION || 7),

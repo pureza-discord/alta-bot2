@@ -2,13 +2,11 @@
   "name": "alta-bot",
   "version": "2.0.0",
   "description": "Bot profissional da Alta Cúpula com Slash Commands",
-  "main": "index.js",
+  "main": "src/bot/bot.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "start:bot": "node index.js",
-    "start:web": "node src/web/server.js",
-    "start:api": "node api.js",
+    "start": "node src/bot/bot.js",
+    "start:bot": "node src/bot/bot.js",
     "deploy": "node deploy-commands.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy"
@@ -31,14 +29,11 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.1",
     "node-cron": "^4.2.1",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
     "pg": "^8.18.0",
     "prisma": "^7.4.0",
-    "sequelize": "^6.37.7",
-    "sqlite3": "^5.1.6",
     "winston": "^3.19.0"
   }
 }

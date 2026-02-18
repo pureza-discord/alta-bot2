@@ -2,16 +2,12 @@ import { Client, Collection, GatewayIntentBits } from "discord.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { loadDatabase } from "../database.js";
 import { AutoMod } from "../systems/automod.js";
 import { AntiRaid } from "../systems/antiraid.js";
 import { TagSystem } from "../systems/tagSystem.js";
 import { config } from "../config/index.js";
-import { initJobs } from "../jobs/index.js";
 import { info, error, registerGlobalErrorHandlers } from "../utils/logger.js";
-import { initScheduler } from "../services/schedulerService.js";
 import { prisma } from "../services/prisma.js";
 import { initInternalApi } from "../services/internalApi.js";
 import { initAutoBackup } from "../services/backupScheduler.js";
@@ -91,19 +87,6 @@ export async function initBot() {
         process.exit(1);
     }
 
-    loadDatabase();
-
-    if (config.mongoURI) {
-        try {
-            await mongoose.connect(config.mongoURI);
-            info("✅ MongoDB conectado com sucesso!");
-        } catch (err) {
-            error("Erro ao conectar ao MongoDB", { error: err.message });
-        }
-    } else {
-        info("MongoDB não configurado. Ignorando conexão.");
-    }
-
     try {
         await prisma.$connect();
         info("✅ Prisma conectado ao PostgreSQL.");
@@ -118,8 +101,6 @@ export async function initBot() {
     client.antiraid = new AntiRaid(client);
     client.tagSystem = new TagSystem(client);
 
-    initJobs();
-    initScheduler(client);
     initAutoBackup(client);
     initUptimeMonitor();
 
