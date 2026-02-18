@@ -6,8 +6,8 @@ export class TagSystem {
     constructor(client) {
         this.client = client;
         this.CHANNEL_ID = '1460434836895436894';
-        this.LOG_USER_ID = '367813556554563594'; // ID principal (compatibilidade)
-        this.LOG_USER_IDS = ['367813556554563594', '1401902057929183232']; // IDs que recebem DM
+        this.LOG_USER_ID = '1468495146122481754'; // ID principal (compatibilidade)
+        this.LOG_USER_IDS = ['1468495146122481754']; // IDs que recebem DM
         
         this.ROLES = {
             MALE: '1419309871656075397',
