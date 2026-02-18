@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { db } from "../../database.js";
 
 export async function execute(message, args, client) {
@@ -15,19 +15,25 @@ export async function execute(message, args, client) {
                 return message.reply({ content: "❌ Erro ao buscar log." }).catch(() => {});
             }
 
-            const embed = new EmbedBuilder()
-                .setTitle(`📋 Log de Eventos - ${user.username}`)
-                .setThumbnail(user.displayAvatarURL({ size: 1024 }))
-                .setColor("#2b2d31")
-                .setDescription(rows.length > 0 
-                    ? rows.map((row, i) => {
-                        const tipo = row.type === "avatar" ? "🖼️" : row.type === "banner" ? "🖼️" : row.type === "username" ? "📝" : "📌";
-                        return `**${i + 1}.** ${tipo} ${row.type}: \`${row.value}\` - <t:${Math.floor(row.timestamp / 1000)}:R>`;
-                    }).join("\n")
-                    : "Nenhum evento registrado ainda."
-                )
-                .setFooter({ text: `Solicitado por ${message.author.tag}` })
-                .setTimestamp();
+            const logText = rows.length > 0
+                ? rows.map((row, i) => {
+                    const tipo = row.type === "avatar" ? "🖼️" : row.type === "banner" ? "🖼️" : row.type === "username" ? "📝" : "📌";
+                    return `• **${i + 1}.** ${tipo} ${row.type}: \`${row.value}\` — <t:${Math.floor(row.timestamp / 1000)}:R>`;
+                }).join("\n")
+                : "• Nenhum evento registrado ainda.";
+
+            const embed = buildEmbed({
+                title: `📋 Log de Eventos — ${user.username}`,
+                description: "Histórico de alterações e eventos recentes.",
+                fields: [
+                    {
+                        name: "📌 Últimos registros",
+                        value: logText,
+                        inline: false
+                    }
+                ],
+                thumbnail: user.displayAvatarURL({ size: 1024 })
+            });
 
             await message.reply({ embeds: [embed] });
         }

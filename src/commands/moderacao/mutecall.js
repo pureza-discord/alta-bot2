@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.MuteMembers)) {
@@ -24,16 +25,16 @@ export async function execute(message, args, client) {
         await member.voice.setMute(true);
         await member.voice.setDeaf(true);
 
-        const embed = new EmbedBuilder()
-            .setTitle("🔇 Membro Mutado na Call")
-            .setColor("#ff0000")
-            .addFields(
+        const embed = buildEmbed({
+            title: "🔇 Membro Mutado na Call",
+            description: "Ação aplicada ao membro em canal de voz.",
+            fields: [
                 { name: "👤 Membro", value: `${member.user.tag}`, inline: true },
                 { name: "🎧 Canal", value: `${member.voice.channel}`, inline: true },
                 { name: "👮 Moderador", value: `${message.author.tag}`, inline: true },
                 { name: "📝 Motivo", value: motivo, inline: false }
-            )
-            .setTimestamp();
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

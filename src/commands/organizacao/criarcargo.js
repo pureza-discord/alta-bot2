@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
@@ -34,15 +35,15 @@ export async function execute(message, args, client) {
             reason: `Criado por ${message.author.tag}`
         });
 
-        const embed = new EmbedBuilder()
-            .setTitle("🎭 Cargo Criado")
-            .setDescription(`O cargo ${cargo} foi criado com sucesso!`)
-            .setColor(cargo.color)
-            .addFields(
+        const embed = buildEmbed({
+            title: "🎭 Cargo Criado",
+            description: `O cargo ${cargo} foi criado com sucesso.`,
+            fields: [
                 { name: "📝 Nome", value: cargo.name, inline: true },
                 { name: "🎨 Cor", value: corHex, inline: true }
-            )
-            .setTimestamp();
+            ],
+            color: cargo.color || undefined
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

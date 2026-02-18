@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!args[0]) {
@@ -47,12 +47,17 @@ export async function execute(message, args, client) {
         });
 
         if (impulsionadores.size === 0) {
-            const embed = new EmbedBuilder()
-                .setTitle("🚀 Impulsionadores do Servidor")
-                .setDescription(`Nenhum membro impulsionou o servidor em **${dataInput}**`)
-                .setColor("#2b2d31")
-                .setFooter({ text: `Solicitado por ${message.author.tag}` })
-                .setTimestamp();
+            const embed = buildEmbed({
+                title: "🚀 Impulsionadores do Servidor",
+                description: `Nenhum membro impulsionou o servidor em **${dataInput}**.`,
+                fields: [
+                    {
+                        name: "📌 Observação",
+                        value: "• Verifique a data informada\n• Use o formato **DD/MM/AAAA**",
+                        inline: false
+                    }
+                ]
+            });
 
             return message.reply({ embeds: [embed] });
         }
@@ -82,15 +87,13 @@ export async function execute(message, args, client) {
             }
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle(`🚀 Impulsionadores do Servidor - ${dataInput}`)
-            .setDescription(`**${impulsionadores.size}** membro(s) impulsionaram o servidor nesta data:`)
-            .setColor("#ff73fa")
-            .addFields(
+        const embed = buildEmbed({
+            title: `🚀 Impulsionadores do Servidor — ${dataInput}`,
+            description: `**${impulsionadores.size}** membro(s) impulsionaram o servidor nesta data.`,
+            fields: [
                 { name: "📋 Lista de Impulsionadores", value: lista || "Nenhum", inline: false }
-            )
-            .setFooter({ text: `Solicitado por ${message.author.tag}` })
-            .setTimestamp();
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

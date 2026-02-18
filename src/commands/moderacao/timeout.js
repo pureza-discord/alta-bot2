@@ -1,4 +1,5 @@
-import { PermissionsBitField, EmbedBuilder } from "discord.js";
+import { PermissionsBitField } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { Logger } from '../../utils/logger.js';
 
 export async function execute(message, args, client) {
@@ -19,17 +20,16 @@ export async function execute(message, args, client) {
     }
 
     if (!args[0] || !args[1]) {
-        const helpEmbed = new EmbedBuilder()
-            .setTitle("📋 Como usar o comando timeout")
-            .setDescription("Use este comando para silenciar temporariamente um membro.")
-            .addFields(
-                { name: "📝 Sintaxe", value: "`.timeout <@membro|ID> <duração> [motivo]`" },
-                { name: "⏰ Duração", value: "• Minutos: `30m` ou `30`\n• Horas: `2h`\n• Dias: `1d`\n• Máximo: 28 dias" },
-                { name: "📖 Exemplos", value: "`.timeout @usuário 30m Spam`\n`.timeout @usuário 2h Comportamento inadequado`\n`.timeout 123456789 1d Flood de mensagens`" },
-                { name: "⚠️ Observações", value: "• O membro não poderá enviar mensagens\n• Não poderá entrar em calls\n• Não poderá reagir a mensagens" }
-            )
-            .setColor("#2b2d31")
-            .setTimestamp();
+        const helpEmbed = buildEmbed({
+            title: "📋 Como usar o comando timeout",
+            description: "Use este comando para silenciar temporariamente um membro.",
+            fields: [
+                { name: "📝 Sintaxe", value: "• `.timeout <@membro|ID> <duração> [motivo]`", inline: false },
+                { name: "⏰ Duração", value: "• Minutos: `30m` ou `30`\n• Horas: `2h`\n• Dias: `1d`\n• Máximo: 28 dias", inline: false },
+                { name: "📖 Exemplos", value: "• `.timeout @usuário 30m Spam`\n• `.timeout @usuário 2h Comportamento inadequado`\n• `.timeout 123456789 1d Flood de mensagens`", inline: false },
+                { name: "⚠️ Observações", value: "• O membro não poderá enviar mensagens\n• Não poderá entrar em calls\n• Não poderá reagir a mensagens", inline: false }
+            ]
+        });
         
         return message.reply({ embeds: [helpEmbed] });
     }
@@ -128,17 +128,16 @@ export async function execute(message, args, client) {
         const timeoutUntil = new Date(Date.now() + timeoutDuration);
 
         // Tentar enviar DM antes de silenciar
-        const dmEmbed = new EmbedBuilder()
-            .setTitle("🔇 Você foi silenciado")
-            .setDescription(`Você foi silenciado no servidor **${message.guild.name}**.`)
-            .addFields(
+        const dmEmbed = buildEmbed({
+            title: "🔇 Você foi silenciado",
+            description: `Você foi silenciado no servidor **${message.guild.name}**.`,
+            fields: [
                 { name: "👮 Moderador", value: message.author.tag, inline: true },
                 { name: "⏰ Duração", value: Logger.formatDuration(duration * 60), inline: true },
                 { name: "📝 Motivo", value: motivo, inline: false },
                 { name: "⏰ Expira em", value: `<t:${Math.floor(timeoutUntil.getTime() / 1000)}:F>`, inline: false }
-            )
-            .setColor("#ffa500")
-            .setTimestamp();
+            ]
+        });
 
         await member.send({ embeds: [dmEmbed] }).catch(() => {
             console.log(`Não foi possível enviar DM para ${member.user.tag}`);
@@ -172,14 +171,13 @@ export async function execute(message, args, client) {
     } catch (error) {
         console.error("Erro ao silenciar membro:", error);
         
-        const errorEmbed = new EmbedBuilder()
-            .setTitle("❌ Erro ao Silenciar")
-            .setDescription("Ocorreu um erro ao tentar silenciar o membro.")
-            .addFields(
-                { name: "🔍 Possíveis causas", value: "• Falta de permissões\n• Hierarquia de cargos\n• Duração inválida\n• Erro interno do Discord" }
-            )
-            .setColor("#ff0000")
-            .setTimestamp();
+        const errorEmbed = buildEmbed({
+            title: "❌ Erro ao Silenciar",
+            description: "Ocorreu um erro ao tentar silenciar o membro.",
+            fields: [
+                { name: "🔍 Possíveis causas", value: "• Falta de permissões\n• Hierarquia de cargos\n• Duração inválida\n• Erro interno do Discord", inline: false }
+            ]
+        });
         
         await message.reply({ embeds: [errorEmbed] }).catch(() => {});
     }

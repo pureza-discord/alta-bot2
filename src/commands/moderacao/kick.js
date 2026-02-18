@@ -1,4 +1,5 @@
-import { PermissionsBitField, EmbedBuilder } from "discord.js";
+import { PermissionsBitField } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { Logger } from '../../utils/logger.js';
 
 export async function execute(message, args, client) {
@@ -19,16 +20,15 @@ export async function execute(message, args, client) {
     }
 
     if (!args[0]) {
-        const helpEmbed = new EmbedBuilder()
-            .setTitle("📋 Como usar o comando kick")
-            .setDescription("Use este comando para expulsar um membro do servidor.")
-            .addFields(
-                { name: "📝 Sintaxe", value: "`.kick <@membro|ID> [motivo]`" },
-                { name: "📖 Exemplos", value: "`.kick @usuário Comportamento inadequado`\n`.kick 123456789 Spam repetido`" },
-                { name: "⚠️ Observações", value: "• O motivo é opcional\n• Você precisa ter cargo superior ao alvo\n• O bot precisa ter cargo superior ao alvo\n• O membro pode retornar com convite" }
-            )
-            .setColor("#2b2d31")
-            .setTimestamp();
+        const helpEmbed = buildEmbed({
+            title: "📋 Como usar o comando kick",
+            description: "Use este comando para expulsar um membro do servidor.",
+            fields: [
+                { name: "📝 Sintaxe", value: "• `.kick <@membro|ID> [motivo]`", inline: false },
+                { name: "📖 Exemplos", value: "• `.kick @usuário Comportamento inadequado`\n• `.kick 123456789 Spam repetido`", inline: false },
+                { name: "⚠️ Observações", value: "• O motivo é opcional\n• Você precisa ter cargo superior ao alvo\n• O bot precisa ter cargo superior ao alvo\n• O membro pode retornar com convite", inline: false }
+            ]
+        });
         
         return message.reply({ embeds: [helpEmbed] });
     }
@@ -94,16 +94,15 @@ export async function execute(message, args, client) {
 
     try {
         // Tentar enviar DM antes de expulsar
-        const dmEmbed = new EmbedBuilder()
-            .setTitle("👢 Você foi expulso")
-            .setDescription(`Você foi expulso do servidor **${message.guild.name}**.`)
-            .addFields(
+        const dmEmbed = buildEmbed({
+            title: "👢 Você foi expulso",
+            description: `Você foi expulso do servidor **${message.guild.name}**.`,
+            fields: [
                 { name: "👮 Moderador", value: message.author.tag, inline: true },
                 { name: "📝 Motivo", value: motivo, inline: false },
                 { name: "ℹ️ Informação", value: "Você pode retornar ao servidor se receber um novo convite.", inline: false }
-            )
-            .setColor("#ff8c00")
-            .setTimestamp();
+            ]
+        });
 
         await member.send({ embeds: [dmEmbed] }).catch(() => {
             console.log(`Não foi possível enviar DM para ${member.user.tag}`);
@@ -131,14 +130,13 @@ export async function execute(message, args, client) {
     } catch (error) {
         console.error("Erro ao expulsar membro:", error);
         
-        const errorEmbed = new EmbedBuilder()
-            .setTitle("❌ Erro ao Expulsar")
-            .setDescription("Ocorreu um erro ao tentar expulsar o membro.")
-            .addFields(
-                { name: "🔍 Possíveis causas", value: "• Falta de permissões\n• Hierarquia de cargos\n• Erro interno do Discord" }
-            )
-            .setColor("#ff0000")
-            .setTimestamp();
+        const errorEmbed = buildEmbed({
+            title: "❌ Erro ao Expulsar",
+            description: "Ocorreu um erro ao tentar expulsar o membro.",
+            fields: [
+                { name: "🔍 Possíveis causas", value: "• Falta de permissões\n• Hierarquia de cargos\n• Erro interno do Discord", inline: false }
+            ]
+        });
         
         await message.reply({ embeds: [errorEmbed] }).catch(() => {});
     }

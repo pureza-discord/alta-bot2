@@ -1,5 +1,8 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { db } from "../../database.js";
+import { User } from "../../models/User.js";
+import { addWarPoints } from "../../services/warService.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
@@ -29,6 +32,18 @@ export async function execute(message, args, client) {
                 return message.reply({ content: "❌ Erro ao registrar aprovação." }).catch(() => {});
             }
 
+            try {
+                await User.addXP(aprovador.id, message.guild.id, 0, {
+                    xpRecruit: 30
+                });
+                const approver = await User.findOne({ userId: aprovador.id, guildId: message.guild.id });
+                if (approver?.districtId) {
+                    await addWarPoints(approver.districtId, 30, "recruitment");
+                }
+            } catch (error) {
+                console.error("Erro ao atualizar recrutamento no Mongo:", error);
+            }
+
             db.get(
                 `SELECT approved_count FROM recruitment WHERE user_id=? AND guild_id=?`,
                 [membro.id, message.guild.id],
@@ -38,15 +53,15 @@ export async function execute(message, args, client) {
                         return message.reply({ content: "❌ Erro ao buscar informações." }).catch(() => {});
                     }
 
-                    const embed = new EmbedBuilder()
-                        .setTitle("✅ Membro Aprovado")
-                        .setColor("#00ff00")
-                        .addFields(
+                    const embed = buildEmbed({
+                        title: "✅ Membro Aprovado",
+                        description: "Registro de aprovação atualizado.",
+                        fields: [
                             { name: "👤 Membro", value: `${membro.tag}`, inline: true },
                             { name: "👮 Aprovado por", value: `${aprovador.tag}`, inline: true },
                             { name: "📊 Total de aprovações", value: `${row.approved_count}`, inline: true }
-                        )
-                        .setTimestamp();
+                        ]
+                    });
 
                     await message.reply({ embeds: [embed] });
                 }

@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder, ChannelType } from "discord.js";
+import { PermissionFlagsBits, ChannelType } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
@@ -19,11 +20,13 @@ export async function execute(message, args, client) {
             parent: categoria?.id || null
         });
 
-        const embed = new EmbedBuilder()
-            .setTitle("💬 Canal de Texto Criado")
-            .setDescription(`O canal ${canal} foi criado com sucesso!`)
-            .setColor("#00ff00")
-            .setTimestamp();
+        const embed = buildEmbed({
+            title: "💬 Canal de Texto Criado",
+            description: `O canal ${canal} foi criado com sucesso.`,
+            fields: [
+                { name: "👮 Moderador", value: `${message.author.tag}`, inline: true }
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

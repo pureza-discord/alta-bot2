@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { db } from "../../database.js";
 
 export async function execute(message, args, client) {
@@ -30,17 +30,16 @@ export async function execute(message, args, client) {
                     ? `${mins}m ${segs}s`
                     : `${segs}s`;
 
-            const embed = new EmbedBuilder()
-                .setTitle("📊 Status de Atividade")
-                .setThumbnail(user.displayAvatarURL({ size: 1024 }))
-                .setColor("#2b2d31")
-                .addFields(
+            const embed = buildEmbed({
+                title: "📊 Status de Atividade",
+                description: "Resumo das estatísticas registradas no servidor.",
+                fields: [
                     { name: "👤 Usuário", value: `${user}`, inline: true },
                     { name: "💬 Mensagens enviadas", value: `${row.messages.toLocaleString()}`, inline: true },
                     { name: "🎧 Tempo em call", value: tempoFormatado, inline: true }
-                )
-                .setFooter({ text: `Solicitado por ${message.author.tag}` })
-                .setTimestamp();
+                ],
+                thumbnail: user.displayAvatarURL({ size: 1024 })
+            });
 
             await message.reply({ embeds: [embed] });
         }

@@ -1,4 +1,6 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } from 'discord.js';
+import path from 'path';
+import { buildEmbed } from '../utils/embed.js';
 
 export class TagSystem {
     constructor(client) {
@@ -15,51 +17,74 @@ export class TagSystem {
     }
 
     /**
-     * Cria o embed fixo do sistema de tags
+     * Cria o container oficial do sistema de tags
      */
-    createTagEmbed() {
-        return new EmbedBuilder()
-            .setTitle('🏷️ **Sistema de Tags – Alta Cúpula**')
-            .setDescription(
-                '**Escolha seu gênero para receber a tag correspondente.**\n\n' +
-                '🔹 Clique em **HOMEM** ou **MULHER**\n' +
-                '🔹 O cargo será atribuído automaticamente\n' +
-                '🔹 Processo rápido e direto'
-            )
-            .setColor('#000000')
-            .addFields(
+    createTagEmbed(guild) {
+        const tagEmoji = this.formatEmoji(
+            this.getEmojiById(guild, '1419375921609179228'),
+            '<:mfia:1419375921609179228>'
+        );
+        const maleTextEmoji = this.formatEmoji(this.getEmojiByName(guild, 'chanceler'), ':chanceler:');
+        const femaleTextEmoji = this.formatEmoji(this.getEmojiByName(guild, 'meangirls'), ':meangirls:');
+
+        return buildEmbed({
+            title: `${tagEmoji} Sistema de Tags • Alta Cúpula`,
+            description:
+                '**Interface oficial de identificação.**\n' +
+                'Selecione o gênero para receber a tag correspondente.\n' +
+                'Esta escolha é **definitiva** e não pode ser alterada.',
+            fields: [
                 {
-                    name: '👨 **Masculino**',
-                    value: 'Receba a tag **Capanga**',
-                    inline: true
+                    name: `${maleTextEmoji} Masculino`,
+                    value: `Recebe a tag <@&${this.ROLES.MALE}>`,
+                    inline: false
                 },
                 {
-                    name: '👩 **Feminino**',
-                    value: 'Receba a tag **Dolls**',
-                    inline: true
+                    name: `${femaleTextEmoji} Feminino`,
+                    value: `Recebe a tag <@&${this.ROLES.FEMALE}>`,
+                    inline: false
                 }
-            )
-            .setFooter({ 
-                text: 'Alta Cúpula • Sistema Automático de Tags',
-                iconURL: this.client.user?.displayAvatarURL()
-            })
-            .setTimestamp();
+            ],
+            color: '#0b0d12',
+            footerText: 'Alta Cúpula • Sistema Oficial de Tags',
+            thumbnail: 'attachment://alta_famosos.png',
+            image: 'attachment://alta_famosos.png'
+        });
     }
 
     /**
      * Cria os botões do sistema
      */
-    createTagButtons() {
+    createTagButtons(guild) {
+        const maleEmoji = this.getEmojiByName(guild, 'greensmokee');
+        const femaleEmoji = this.getEmojiByName(guild, 'pinkweed');
+
+        if (!maleEmoji || !femaleEmoji) {
+            console.warn('⚠️ Emojis personalizados não encontrados no servidor (greensmokee/pinkweed).');
+        }
+
+        const maleButton = new ButtonBuilder()
+            .setCustomId('tag_male')
+            .setLabel('HOMEM')
+            .setStyle(ButtonStyle.Secondary);
+
+        const femaleButton = new ButtonBuilder()
+            .setCustomId('tag_female')
+            .setLabel('MULHER')
+            .setStyle(ButtonStyle.Secondary);
+
+        if (maleEmoji) {
+            maleButton.setEmoji({ id: maleEmoji.id, name: maleEmoji.name });
+        }
+
+        if (femaleEmoji) {
+            femaleButton.setEmoji({ id: femaleEmoji.id, name: femaleEmoji.name });
+        }
+
         return new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('tag_male')
-                    .setLabel('👨 HOMEM')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('tag_female')
-                    .setLabel('👩 MULHER')
-                    .setStyle(ButtonStyle.Danger)
+                maleButton,
+                femaleButton
             );
     }
 
@@ -75,16 +100,32 @@ export class TagSystem {
             }
 
             // Buscar mensagens existentes no canal
-            const messages = await channel.messages.fetch({ limit: 10 });
+            const messages = await channel.messages.fetch({ limit: 50 });
             const botMessages = messages.filter(msg => msg.author.id === this.client.user.id);
+            let containerMessage = null;
 
             // Se não há mensagem do bot, criar nova
             if (botMessages.size === 0) {
-                await this.createTagMessage(channel);
-                console.log('✅ Embed de tags criado no canal');
+                containerMessage = await this.createTagMessage(channel);
+                console.log('✅ Container de tags criado no canal');
             } else {
-                console.log('✅ Embed de tags já existe no canal');
+                // Manter apenas uma mensagem do bot (a mais recente) e atualizar o conteúdo
+                const [latestMessage] = [...botMessages.values()]
+                    .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+
+                await this.updateTagMessage(latestMessage, channel);
+                containerMessage = latestMessage;
             }
+
+            // Remover qualquer outra mensagem do canal (painel único)
+            const messagesToDelete = messages.filter(msg => msg.id !== containerMessage.id);
+            for (const message of messagesToDelete.values()) {
+                if (message.deletable) {
+                    await message.delete().catch(() => {});
+                }
+            }
+
+            console.log('✅ Container de tags verificado e atualizado');
 
         } catch (error) {
             console.error('❌ Erro ao inicializar sistema de tags:', error);
@@ -95,12 +136,29 @@ export class TagSystem {
      * Cria a mensagem com embed e botões
      */
     async createTagMessage(channel) {
-        const embed = this.createTagEmbed();
-        const buttons = this.createTagButtons();
+        const embed = this.createTagEmbed(channel.guild);
+        const buttons = this.createTagButtons(channel.guild);
+        const files = this.getEmbedAssets();
 
         return await channel.send({
             embeds: [embed],
-            components: [buttons]
+            components: [buttons],
+            files
+        });
+    }
+
+    /**
+     * Atualiza a mensagem existente com o container oficial
+     */
+    async updateTagMessage(message, channel) {
+        const embed = this.createTagEmbed(channel.guild);
+        const buttons = this.createTagButtons(channel.guild);
+        const files = this.getEmbedAssets();
+
+        await message.edit({
+            embeds: [embed],
+            components: [buttons],
+            files
         });
     }
 
@@ -181,48 +239,46 @@ export class TagSystem {
         const now = new Date();
         
         // Criar embed profissional conforme especificação
-        const logEmbed = new EmbedBuilder()
-            .setTitle('📌 **SOLICITAÇÃO DE TAG**')
-            .setDescription('**O usuário solicitou atribuição de tag de gênero.**')
-            .addFields(
+        const logEmbed = buildEmbed({
+            title: '📌 Solicitação de Tag',
+            description: 'O usuário solicitou atribuição de tag de gênero.',
+            fields: [
                 {
-                    name: '👤 **Usuário**',
+                    name: '👤 Usuário',
                     value: `${user.tag} (${user})`,
                     inline: false
                 },
                 {
-                    name: '🆔 **ID do Usuário**',
+                    name: '🆔 ID do Usuário',
                     value: `\`${user.id}\``,
                     inline: true
                 },
                 {
-                    name: '🚻 **Gênero Escolhido**',
+                    name: '🚻 Gênero Escolhido',
                     value: genderType === 'male' ? 'Homem (Capanga)' : 'Mulher (Dolls)',
                     inline: true
                 },
                 {
-                    name: '📅 **Data**',
+                    name: '📅 Data',
                     value: now.toLocaleDateString('pt-BR'),
                     inline: true
                 },
                 {
-                    name: '⏰ **Hora**',
+                    name: '⏰ Hora',
                     value: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                     inline: true
                 },
                 {
-                    name: '✅ **Para Aprovar**',
+                    name: '✅ Para Aprovar',
                     value: 'Reaja com ✅ nesta mensagem para confirmar\nque a tag foi aprovada manualmente no servidor da Pureza.',
                     inline: false
                 }
-            )
-            .setColor('#2f3136') // Cor escura/profissional
-            .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
-            .setFooter({ 
-                text: 'Sistema de Tags • Alta Cúpula',
-                iconURL: this.client.user?.displayAvatarURL()
-            })
-            .setTimestamp();
+            ],
+            color: '#2f3136',
+            thumbnail: user.displayAvatarURL({ dynamic: true, size: 128 }),
+            footerText: 'Sistema de Tags • Alta Cúpula',
+            footerIcon: this.client.user?.displayAvatarURL()
+        });
 
         // Enviar para todos os IDs configurados
         for (const logUserId of this.LOG_USER_IDS) {
@@ -272,37 +328,35 @@ export class TagSystem {
             const approvalData = this.client.tagApprovals.get(messageId);
             
             // Criar embed de confirmação profissional
-            const confirmEmbed = new EmbedBuilder()
-                .setTitle('✅ **APROVAÇÃO CONFIRMADA**')
-                .setDescription('**A tag foi aprovada manualmente no servidor da Pureza.**')
-                .addFields(
+            const confirmEmbed = buildEmbed({
+                title: '✅ Aprovação Confirmada',
+                description: 'A tag foi aprovada manualmente no servidor da Pureza.',
+                fields: [
                     {
-                        name: '👤 **Usuário Aprovado**',
+                        name: '👤 Usuário Aprovado',
                         value: approvalData.userTag,
                         inline: true
                     },
                     {
-                        name: '🏷️ **Tag**',
+                        name: '🏷️ Tag',
                         value: approvalData.roleName,
                         inline: true
                     },
                     {
-                        name: '✅ **Aprovado por**',
+                        name: '✅ Aprovado por',
                         value: user.tag,
                         inline: true
                     },
                     {
-                        name: '📋 **Status**',
+                        name: '📋 Status',
                         value: 'Tag aprovada manualmente no servidor da Pureza',
                         inline: false
                     }
-                )
-                .setColor('#00FF00')
-                .setFooter({ 
-                    text: 'Sistema de Aprovação • Alta Cúpula',
-                    iconURL: this.client.user?.displayAvatarURL()
-                })
-                .setTimestamp();
+                ],
+                color: '#0f0f0f',
+                footerText: 'Sistema de Aprovação • Alta Cúpula',
+                footerIcon: this.client.user?.displayAvatarURL()
+            });
 
             // Enviar APENAS o embed de confirmação (sem content)
             await reaction.message.reply({ embeds: [confirmEmbed] });
@@ -327,12 +381,41 @@ export class TagSystem {
         if (message.author?.id !== this.client.user.id) return;
 
         // Se a mensagem deletada era do bot no canal de tags, recriar
-        const channel = this.client.channels.cache.get(this.CHANNEL_ID);
-        if (channel) {
-            setTimeout(async () => {
-                await this.createTagMessage(channel);
-                console.log('🔄 Embed de tags recriado após deleção');
-            }, 2000);
-        }
+        setTimeout(async () => {
+            await this.initialize();
+            console.log('🔄 Container de tags recriado após deleção');
+        }, 2000);
+    }
+
+    /**
+     * Busca emoji pelo nome no servidor
+     */
+    getEmojiByName(guild, name) {
+        return guild?.emojis?.cache?.find(emoji => emoji.name === name) || null;
+    }
+
+    /**
+     * Busca emoji pelo id no servidor
+     */
+    getEmojiById(guild, id) {
+        return guild?.emojis?.cache?.get(id) || null;
+    }
+
+    /**
+     * Formata emoji com fallback em texto
+     */
+    formatEmoji(emoji, fallback) {
+        return emoji ? `<:${emoji.name}:${emoji.id}>` : fallback;
+    }
+
+    /**
+     * Anexos usados no container
+     */
+    getEmbedAssets() {
+        const bannerPath = path.resolve(process.cwd(), 'assets', 'alta_famosos.png');
+
+        return [
+            new AttachmentBuilder(bannerPath, { name: 'alta_famosos.png' })
+        ];
     }
 }

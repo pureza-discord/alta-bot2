@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
@@ -12,11 +13,13 @@ export async function execute(message, args, client) {
             SendMessages: false
         });
 
-        const embed = new EmbedBuilder()
-            .setTitle("🔒 Canal Trancado")
-            .setDescription(`O canal ${channel} foi trancado com sucesso.`)
-            .setColor("#ff0000")
-            .setTimestamp();
+        const embed = buildEmbed({
+            title: "🔒 Canal Trancado",
+            description: `O canal ${channel} foi trancado com sucesso.`,
+            fields: [
+                { name: "👮 Moderador", value: `${message.author.tag}`, inline: true }
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

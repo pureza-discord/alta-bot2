@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { db } from "../../database.js";
 
 export async function execute(message, args, client) {
@@ -15,16 +15,22 @@ export async function execute(message, args, client) {
                 return message.reply({ content: "❌ Erro ao buscar histórico." }).catch(() => {});
             }
 
-            const embed = new EmbedBuilder()
-                .setTitle(`📝 Histórico de Nomes - ${user.username}`)
-                .setThumbnail(user.displayAvatarURL({ size: 1024 }))
-                .setColor("#2b2d31")
-                .setDescription(rows.length > 0 
-                    ? rows.map((row, i) => `**${i + 1}.** \`${row.value}\` - <t:${Math.floor(row.timestamp / 1000)}:R>`).join("\n")
-                    : "Nenhum nome anterior registrado. O histórico é salvo quando o nome é alterado."
-                )
-                .setFooter({ text: `Solicitado por ${message.author.tag}` })
-                .setTimestamp();
+            const historyText = rows.length > 0
+                ? rows.map((row, i) => `• **${i + 1}.** \`${row.value}\` — <t:${Math.floor(row.timestamp / 1000)}:R>`).join("\n")
+                : "• Nenhum nome anterior registrado.\n• O histórico é salvo quando o nome é alterado.";
+
+            const embed = buildEmbed({
+                title: `📝 Histórico de Nomes — ${user.username}`,
+                description: "Registro dos últimos nomes utilizados no servidor.",
+                fields: [
+                    {
+                        name: "📌 Últimas alterações",
+                        value: historyText,
+                        inline: false
+                    }
+                ],
+                thumbnail: user.displayAvatarURL({ size: 1024 })
+            });
 
             await message.reply({ embeds: [embed] });
         }

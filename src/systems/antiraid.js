@@ -1,4 +1,4 @@
-import { EmbedBuilder, PermissionsBitField, AuditLogEvent } from 'discord.js';
+import { PermissionsBitField, AuditLogEvent } from 'discord.js';
 import { SERVER_CONFIG } from '../utils/config.js';
 import { Logger } from '../utils/logger.js';
 

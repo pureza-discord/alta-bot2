@@ -6,15 +6,39 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "deploy": "node deploy-commands.js"
+    "start:bot": "node index.js",
+    "start:web": "node src/web/server.js",
+    "start:api": "node api.js",
+    "deploy": "node deploy-commands.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy"
   },
-  "keywords": ["discord", "bot", "discord.js"],
+  "keywords": [
+    "discord",
+    "bot",
+    "discord.js"
+  ],
   "author": "Taki",
   "license": "MIT",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.4.0",
+    "@prisma/client": "^7.4.0",
+    "chalk": "^5.6.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.1",
+    "node-cron": "^4.2.1",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "pg": "^8.18.0",
+    "prisma": "^7.4.0",
+    "sequelize": "^6.37.7",
     "sqlite3": "^5.1.6",
-    "dotenv": "^16.3.1"
+    "winston": "^3.19.0"
   }
 }
-

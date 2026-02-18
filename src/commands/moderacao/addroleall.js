@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
@@ -35,15 +36,16 @@ export async function execute(message, args, client) {
             }
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle("➕ Cargo Adicionado a Todos")
-            .setColor(role.color || "#2b2d31")
-            .addFields(
+        const embed = buildEmbed({
+            title: "➕ Cargo Adicionado a Todos",
+            description: "Operação em massa concluída.",
+            fields: [
                 { name: "🎭 Cargo", value: `${role}`, inline: true },
                 { name: "✅ Sucesso", value: `${sucesso}`, inline: true },
                 { name: "❌ Falhas", value: `${falhas}`, inline: true }
-            )
-            .setTimestamp();
+            ],
+            color: role.color || undefined
+        });
 
         await loadingMsg.edit({ content: "", embeds: [embed] });
     } catch (error) {

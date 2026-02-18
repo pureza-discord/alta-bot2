@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder, ChannelType } from "discord.js";
+import { PermissionFlagsBits, ChannelType } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
@@ -17,11 +18,13 @@ export async function execute(message, args, client) {
             type: ChannelType.GuildCategory
         });
 
-        const embed = new EmbedBuilder()
-            .setTitle("📁 Categoria Criada")
-            .setDescription(`A categoria **${categoria.name}** foi criada com sucesso!`)
-            .setColor("#00ff00")
-            .setTimestamp();
+        const embed = buildEmbed({
+            title: "📁 Categoria Criada",
+            description: `A categoria **${categoria.name}** foi criada com sucesso.`,
+            fields: [
+                { name: "👮 Moderador", value: `${message.author.tag}`, inline: true }
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

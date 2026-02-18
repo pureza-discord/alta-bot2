@@ -1,4 +1,4 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { SERVER_CONFIG } from '../../utils/config.js';
 
 export async function execute(message, args, client) {
@@ -17,7 +17,6 @@ export async function execute(message, args, client) {
     const hasTagNaPureza = hasDollsRole || hasCapangaRole;
     
     let statusText = '';
-    let statusColor = '';
     let rolesList = [];
     
     if (hasDollsRole) {
@@ -32,48 +31,41 @@ export async function execute(message, args, client) {
     
     if (hasTagNaPureza) {
         statusText = '✅ **TEM TAG NA PUREZA**';
-        statusColor = '#00FF00';
     } else {
         statusText = '❌ **NÃO TEM TAG NA PUREZA**';
-        statusColor = '#FF0000';
     }
 
-    const embed = new EmbedBuilder()
-        .setTitle('🔍 **VERIFICAÇÃO DE TAG NA PUREZA**')
-        .setDescription(`**Verificação para:** ${user}\n\n${statusText}`)
-        .addFields(
+    const embed = buildEmbed({
+        title: '🔍 Verificação de Tag — Alta Cúpula',
+        description: `Verificação para ${user}\n${statusText}`,
+        fields: [
             {
-                name: '👤 **Usuário**',
+                name: '👤 Usuário',
                 value: `${user.tag}`,
                 inline: true
             },
             {
-                name: '🆔 **ID**',
+                name: '🆔 ID',
                 value: `\`${user.id}\``,
                 inline: true
             },
             {
-                name: '🏷️ **Tags Relevantes**',
+                name: '🏷️ Tags Relevantes',
                 value: rolesList.length > 0 ? rolesList.join('\n') : 'Nenhuma tag relevante',
                 inline: false
             },
             {
-                name: '📊 **Status**',
+                name: '📊 Status',
                 value: hasTagNaPureza ? 
-                    '🟢 **Usuário possui tag na pureza**\n*Tem acesso aos canais especiais*' : 
+                    '🟢 **Usuário possui tag na pureza**\n• Tem acesso aos canais especiais' : 
                     hasNaoVerificadoRole ?
-                        '🟡 **Usuário não verificado**\n*Precisa solicitar tag de gênero*' :
-                        '🔴 **Usuário sem tags relevantes**\n*Não tem acesso aos canais especiais*',
+                        '🟡 **Usuário não verificado**\n• Precisa solicitar tag de gênero' :
+                        '🔴 **Usuário sem tags relevantes**\n• Não tem acesso aos canais especiais',
                 inline: false
             }
-        )
-        .setColor(statusColor)
-        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-        .setFooter({ 
-            text: `Verificação solicitada por ${message.author.tag}`,
-            iconURL: message.author.displayAvatarURL({ dynamic: true })
-        })
-        .setTimestamp();
+        ],
+        thumbnail: user.displayAvatarURL({ dynamic: true })
+    });
 
     await message.reply({ embeds: [embed] });
     

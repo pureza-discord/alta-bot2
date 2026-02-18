@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  guildId       String
+  discordId     String
+  username      String
+  avatar        String?
+  mensagens     Int      @default(0)
+  eventos       Int      @default(0)
+  recrutas      Int      @default(0)
+  guerraPontos  Int      @default(0)
+  meritPoints   Int      @default(0)
+  meritStars    Int      @default(0)
+  nivel         String   @default("Capanga")
+  influencia    Int      @default(0)
+  dinheiro      Int      @default(0)
+  distritoId    String?
+  temporadaId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  medals        UserMedalha[]
+  economyLogs   EconomiaLog[]
+
+  @@unique([guildId, discordId])
+  @@index([guildId, nivel])
+}
+
+model Distrito {
+  id            String   @id @default(cuid())
+  guildId       String
+  nome          String
+  pontos        Int      @default(0)
+  capitaoId     String?
+  comandante1Id String?
+  comandante2Id String?
+  conselheiroId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([guildId, nome])
+  @@index([guildId, pontos])
+}
+
+model Guerra {
+  id          String   @id @default(cuid())
+  guildId     String
+  distritoA   String
+  distritoB   String
+  status      String   @default("pending")
+  vencedorId  String?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([guildId, status])
+}
+
+model Evento {
+  id            String   @id @default(cuid())
+  guildId       String
+  nome          String
+  participantes String[]
+  vencedorId    String?
+  criadoPor     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([guildId, createdAt])
+}
+
+model Temporada {
+  id        String   @id @default(cuid())
+  guildId   String
+  numero    Int
+  ativa     Boolean  @default(true)
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, numero])
+}
+
+model Medalha {
+  id         String   @id @default(cuid())
+  nome       String
+  descricao  String?
+  permanente Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users      UserMedalha[]
+  @@unique([nome])
+}
+
+model UserMedalha {
+  userId    String
+  medalhaId String
+  guildId   String
+  createdAt DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id])
+  medalha   Medalha @relation(fields: [medalhaId], references: [id])
+
+  @@id([userId, medalhaId, guildId])
+}
+
+model EconomiaLog {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  tipo      String
+  valor     Int
+  descricao String?
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+  @@index([guildId, createdAt])
+}
+
+model Recrutamento {
+  id            String   @id @default(cuid())
+  guildId       String
+  indicadorId   String
+  novoMembroId  String
+  validado      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([guildId, validado])
+}
+
+model Contrato {
+  id            String   @id @default(cuid())
+  guildId       String
+  distritoId    String?
+  descricao     String
+  metaMensagens Int
+  metaRecrutas  Int
+  recompensa    Int
+  prazo         DateTime?
+  progressoMensagens Int @default(0)
+  progressoRecrutas  Int @default(0)
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Missao {
+  id        String   @id @default(cuid())
+  guildId   String
+  tipo      String
+  objetivo  Int
+  recompensa Int
+  ativa     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MissaoDistrito {
+  id          String   @id @default(cuid())
+  guildId     String
+  distritoId  String
+  temporadaId String?
+  tipo        String
+  objetivo    Int
+  progresso   Int      @default(0)
+  recompensa  Int
+  ativa       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([guildId, distritoId])
+  @@index([guildId, temporadaId])
+  @@index([guildId, ativa])
+}
+
+model Punishment {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  type      String
+  reason    String?
+  duration  Int?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guildId, userId, active])
+}
+
+model MessageMetric {
+  id              String   @id @default(cuid())
+  guildId         String
+  userId          String
+  districtId      String?
+  categoryId      String?
+  day             DateTime
+  hour            Int
+  messages        Int      @default(0)
+  replies         Int      @default(0)
+  threads         Int      @default(0)
+  engagementScore Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([guildId, userId, categoryId, day, hour])
+  @@index([guildId, day])
+  @@index([guildId, districtId])
+  @@index([guildId, categoryId])
+}
+
+model Proposta {
+  id         String   @id @default(cuid())
+  guildId    String
+  titulo     String
+  descricao  String?
+  status     String   @default("open")
+  createdBy  String
+  votosSim   Int      @default(0)
+  votosNao   Int      @default(0)
+  votantes   String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  guildId   String
+  action    String
+  actorId   String?
+  targetId  String?
+  source    String?
+  severity  String   @default("info")
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([guildId, action])
+  @@index([guildId, createdAt])
+}
+
+model VipAccess {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  type      String   @default("VIP")
+  expiresAt DateTime
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, userId])
+  @@index([guildId, active])
+  @@index([guildId, expiresAt])
+}

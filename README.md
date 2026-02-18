@@ -39,13 +39,15 @@ cd alta-bot2
 npm install
 
 # Configure as variáveis de ambiente
-# Crie um arquivo .env com:
-DISCORD_TOKEN=seu_token_aqui
-CLIENT_ID=seu_client_id_aqui
+# Use o modelo em docs/env.example.txt
+# (copie para .env e preencha os valores)
 
 # Execute o bot
 npm start
 ```
+
+### Variáveis obrigatórias para Prisma
+- `DATABASE_URL` (necessário para `npm run prisma:migrate`)
 
 ## 📋 Comandos Disponíveis
 

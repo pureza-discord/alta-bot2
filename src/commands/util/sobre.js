@@ -1,29 +1,34 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
-    const embed = new EmbedBuilder()
-        .setTitle("🤖 Sobre o Bot • Alta Cúpula")
-        .setColor("#2b2d31")
-        .setDescription("Bot profissional desenvolvido para a Alta Cúpula com todas as funcionalidades necessárias.")
-        .addFields(
+    const embed = buildEmbed({
+        title: "🤖 Sobre o Bot — Alta Cúpula",
+        description: "Informações oficiais sobre o bot e sua estrutura.",
+        fields: [
             {
                 name: "📊 Estatísticas",
-                value: `**Servidores:** ${client.guilds.cache.size}\n**Usuários:** ${client.users.cache.size}\n**Comandos:** ${client.commands.size}`,
+                value:
+                    `• **Servidores:** ${client.guilds.cache.size}\n` +
+                    `• **Usuários:** ${client.users.cache.size}\n` +
+                    `• **Comandos:** ${client.commands.size}`,
                 inline: true
             },
             {
                 name: "⚙️ Tecnologias",
-                value: "**Node.js** + **Discord.js v14**\n**SQLite3** para database\n**Prefix + Slash Commands**",
+                value:
+                    "• **Node.js**\n" +
+                    "• **Discord.js v14**\n" +
+                    "• **SQLite3**\n" +
+                    "• **Prefix + Slash Commands**",
                 inline: true
             },
             {
                 name: "👨‍💻 Desenvolvedor",
-                value: "**Taki**\nBot 100% funcional e profissional",
+                value: "• **Taki**\n• Bot multi funções da alta cúpula",
                 inline: true
             }
-        )
-        .setFooter({ text: "Alta Cúpula • Versão 2.0.0" })
-        .setTimestamp();
+        ]
+    });
 
     await message.reply({ embeds: [embed] });
 }

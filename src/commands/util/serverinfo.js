@@ -1,14 +1,13 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     const guild = message.guild;
     const owner = await guild.fetchOwner();
 
-    const embed = new EmbedBuilder()
-        .setTitle(`🏛️ ${guild.name}`)
-        .setThumbnail(guild.iconURL({ size: 1024 }))
-        .setColor("#2b2d31")
-        .addFields(
+    const embed = buildEmbed({
+        title: `🏛️ ${guild.name}`,
+        description: "Resumo geral e estatísticas do servidor.",
+        fields: [
             { name: "👑 Dono", value: `${owner.user.tag}`, inline: true },
             { name: "🆔 ID", value: guild.id, inline: true },
             { name: "📅 Criado em", value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true },
@@ -18,9 +17,9 @@ export async function execute(message, args, client) {
             { name: "😀 Emojis", value: `${guild.emojis.cache.size}`, inline: true },
             { name: "✅ Nível de Boost", value: `${guild.premiumTier}`, inline: true },
             { name: "🚀 Boosts", value: `${guild.premiumSubscriptionCount || 0}`, inline: true }
-        )
-        .setFooter({ text: `Solicitado por ${message.author.tag}` })
-        .setTimestamp();
+        ],
+        thumbnail: guild.iconURL({ size: 1024 })
+    });
 
     if (guild.bannerURL()) {
         embed.setImage(guild.bannerURL({ size: 1024 }));

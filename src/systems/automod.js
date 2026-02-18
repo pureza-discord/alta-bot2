@@ -1,4 +1,5 @@
-import { EmbedBuilder, PermissionsBitField } from 'discord.js';
+import { PermissionsBitField } from 'discord.js';
+import { buildEmbed } from '../utils/embed.js';
 import { SERVER_CONFIG } from '../utils/config.js';
 import { Logger } from '../utils/logger.js';
 
@@ -213,17 +214,15 @@ export class AutoMod {
     
     async sendUserNotification(message, infractions, punishment, warningCount) {
         try {
-            const embed = new EmbedBuilder()
-                .setTitle('🤖 AutoMod - Infração Detectada')
-                .setDescription('Sua mensagem foi removida por violar as regras do servidor.')
-                .setColor('#ff6b6b')
-                .addFields(
+            const embed = buildEmbed({
+                title: '🤖 AutoMod — Infração Detectada',
+                description: 'Sua mensagem foi removida por violar as regras do servidor.',
+                fields: [
                     { name: '🚫 Infrações', value: infractions.join(', '), inline: true },
                     { name: '⚠️ Warnings', value: `${warningCount}/10`, inline: true },
                     { name: '⚡ Ação', value: punishment, inline: true }
-                )
-                .setFooter({ text: 'Respeite as regras do servidor' })
-                .setTimestamp();
+                ]
+            });
             
             await message.author.send({ embeds: [embed] }).catch(() => {
                 // Se não conseguir enviar DM, enviar no canal (ephemeral se possível)

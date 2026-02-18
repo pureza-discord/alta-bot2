@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
@@ -22,14 +23,14 @@ export async function execute(message, args, client) {
     try {
         await member.timeout(null);
 
-        const embed = new EmbedBuilder()
-            .setTitle("🔊 Timeout Removido")
-            .setColor("#00ff00")
-            .addFields(
+        const embed = buildEmbed({
+            title: "🔊 Timeout Removido",
+            description: "Ação de moderação concluída.",
+            fields: [
                 { name: "👤 Membro", value: `${member.user.tag}`, inline: true },
                 { name: "👮 Moderador", value: `${message.author.tag}`, inline: true }
-            )
-            .setTimestamp();
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

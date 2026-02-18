@@ -1,4 +1,5 @@
-import { PermissionsBitField, EmbedBuilder } from 'discord.js';
+import { PermissionsBitField } from 'discord.js';
+import { buildEmbed } from '../../utils/embed.js';
 import { BackupSystem } from '../../systems/backup.js';
 import { SERVER_CONFIG } from '../../utils/config.js';
 
@@ -51,11 +52,13 @@ export async function execute(message, args, client) {
 
 async function handleCreateBackup(message, client) {
     try {
-        const loadingEmbed = new EmbedBuilder()
-            .setTitle('📦 Criando Backup...')
-            .setDescription('Por favor aguarde, este processo pode demorar alguns minutos.')
-            .setColor('#ffa500')
-            .setTimestamp();
+        const loadingEmbed = buildEmbed({
+            title: '📦 Criando Backup...',
+            description: 'Por favor aguarde, este processo pode demorar alguns minutos.',
+            fields: [
+                { name: '📌 Status', value: '• Processando dados do servidor', inline: false }
+            ]
+        });
         
         const loadingMessage = await message.reply({ embeds: [loadingEmbed] });
         
@@ -65,27 +68,28 @@ async function handleCreateBackup(message, client) {
         // Obter informações do backup
         const backupInfo = await backupSystem.getBackupInfo(message.guild.id);
         
-        const successEmbed = new EmbedBuilder()
-            .setTitle('✅ Backup Criado com Sucesso!')
-            .setColor('#00ff00')
-            .addFields(
+        const successEmbed = buildEmbed({
+            title: '✅ Backup Criado com Sucesso!',
+            description: 'Backup salvo no banco de dados com segurança.',
+            fields: [
                 { name: '📁 Canais Salvos', value: backupInfo.channels.toString(), inline: true },
                 { name: '👑 Cargos Salvos', value: backupInfo.roles.toString(), inline: true },
                 { name: '⏰ Criado em', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
-            )
-            .setFooter({ text: 'Backup salvo no banco de dados' })
-            .setTimestamp();
+            ]
+        });
         
         await loadingMessage.edit({ embeds: [successEmbed] });
         
     } catch (error) {
         console.error('Erro ao criar backup:', error);
         
-        const errorEmbed = new EmbedBuilder()
-            .setTitle('❌ Erro ao Criar Backup')
-            .setDescription(`\`\`\`${error.message}\`\`\``)
-            .setColor('#ff0000')
-            .setTimestamp();
+        const errorEmbed = buildEmbed({
+            title: '❌ Erro ao Criar Backup',
+            description: 'Ocorreu um erro durante a criação do backup.',
+            fields: [
+                { name: '🧾 Detalhes', value: `\`\`\`${error.message}\`\`\``, inline: false }
+            ]
+        });
         
         await message.reply({ embeds: [errorEmbed] });
     }
@@ -93,53 +97,56 @@ async function handleCreateBackup(message, client) {
 
 async function handleRestoreBackup(message, args, client) {
     // Confirmação adicional para restore
-    const confirmEmbed = new EmbedBuilder()
-        .setTitle('⚠️ Confirmação de Restore')
-        .setDescription('**ATENÇÃO:** O restore irá recriar canais e cargos que não existem mais.\n\nEsta ação não pode ser desfeita. Tem certeza que deseja continuar?')
-        .setColor('#ff8c00')
-        .addFields(
-            { name: '✅ Para confirmar', value: 'Digite: `.backup restore confirm`' },
-            { name: '❌ Para cancelar', value: 'Ignore esta mensagem' }
-        )
-        .setTimestamp();
+    const confirmEmbed = buildEmbed({
+        title: '⚠️ Confirmação de Restore',
+        description: 'Esta ação irá recriar canais e cargos que não existem mais.',
+        fields: [
+            { name: '⚠️ Importante', value: '• Esta ação não pode ser desfeita', inline: false },
+            { name: '✅ Para confirmar', value: 'Digite: `.backup restore confirm`', inline: false },
+            { name: '❌ Para cancelar', value: 'Ignore esta mensagem', inline: false }
+        ]
+    });
     
     if (args[0] !== 'confirm') {
         return message.reply({ embeds: [confirmEmbed] });
     }
     
     try {
-        const loadingEmbed = new EmbedBuilder()
-            .setTitle('🔄 Restaurando Backup...')
-            .setDescription('Por favor aguarde, este processo pode demorar vários minutos.')
-            .setColor('#ffa500')
-            .setTimestamp();
+        const loadingEmbed = buildEmbed({
+            title: '🔄 Restaurando Backup...',
+            description: 'Por favor aguarde, este processo pode demorar vários minutos.',
+            fields: [
+                { name: '📌 Status', value: '• Restaurando canais e cargos', inline: false }
+            ]
+        });
         
         const loadingMessage = await message.reply({ embeds: [loadingEmbed] });
         
         // Restaurar backup
         const results = await backupSystem.restoreFromBackup(message.guild, message.author.id);
         
-        const successEmbed = new EmbedBuilder()
-            .setTitle('✅ Restore Concluído!')
-            .setColor('#00ff00')
-            .addFields(
+        const successEmbed = buildEmbed({
+            title: '✅ Restore Concluído!',
+            description: 'Processo finalizado com os resultados abaixo.',
+            fields: [
                 { name: '📁 Canais', value: `✅ ${results.channels.created} criados\n❌ ${results.channels.failed} falharam`, inline: true },
                 { name: '👑 Cargos', value: `✅ ${results.roles.created} criados\n❌ ${results.roles.failed} falharam`, inline: true },
                 { name: '⏰ Concluído em', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
-            )
-            .setFooter({ text: 'Restore finalizado' })
-            .setTimestamp();
+            ]
+        });
         
         await loadingMessage.edit({ embeds: [successEmbed] });
         
     } catch (error) {
         console.error('Erro ao restaurar backup:', error);
         
-        const errorEmbed = new EmbedBuilder()
-            .setTitle('❌ Erro ao Restaurar Backup')
-            .setDescription(`\`\`\`${error.message}\`\`\``)
-            .setColor('#ff0000')
-            .setTimestamp();
+        const errorEmbed = buildEmbed({
+            title: '❌ Erro ao Restaurar Backup',
+            description: 'Ocorreu um erro durante o restore.',
+            fields: [
+                { name: '🧾 Detalhes', value: `\`\`\`${error.message}\`\`\``, inline: false }
+            ]
+        });
         
         await message.reply({ embeds: [errorEmbed] });
     }
@@ -163,26 +170,27 @@ async function handleBackupInfo(message, client) {
 }
 
 async function showBackupHelp(message) {
-    const helpEmbed = new EmbedBuilder()
-        .setTitle('📦 Sistema de Backup & Restore')
-        .setDescription('Sistema profissional de backup para proteger seu servidor contra raids e nukes.')
-        .setColor('#2b2d31')
-        .addFields(
+    const helpEmbed = buildEmbed({
+        title: '📦 Sistema de Backup & Restore',
+        description: 'Sistema profissional de backup para proteger seu servidor contra raids e nukes.',
+        fields: [
             {
                 name: '📋 Comandos Disponíveis',
-                value: '`.backup criar` - Criar backup completo\n`.backup restaurar` - Restaurar backup\n`.backup info` - Ver informações do backup'
+                value: '• `.backup criar` - Criar backup completo\n• `.backup restaurar` - Restaurar backup\n• `.backup info` - Ver informações do backup',
+                inline: false
             },
             {
                 name: '💾 O que é salvo?',
-                value: '• Todos os canais (nome, tipo, categoria, posição)\n• Todas as permissões de canais\n• Todos os cargos (nome, cor, permissões, posição)'
+                value: '• Todos os canais (nome, tipo, categoria, posição)\n• Todas as permissões de canais\n• Todos os cargos (nome, cor, permissões, posição)',
+                inline: false
             },
             {
                 name: '⚠️ Importante',
-                value: '• O backup sobrescreve dados anteriores\n• O restore só cria itens que não existem\n• Apenas administradores podem usar'
+                value: '• O backup sobrescreve dados anteriores\n• O restore só cria itens que não existem\n• Apenas administradores podem usar',
+                inline: false
             }
-        )
-        .setFooter({ text: 'Use com responsabilidade' })
-        .setTimestamp();
+        ]
+    });
     
     await message.reply({ embeds: [helpEmbed] });
 }

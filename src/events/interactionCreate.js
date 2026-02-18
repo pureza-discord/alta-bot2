@@ -1,3 +1,12 @@
+import { handleEventAnnouncementInteraction } from "../handlers/eventAnnouncementHandler.js";
+import { buildEmbed } from "../utils/embed.js";
+import { SERVER_CONFIG } from "../utils/config.js";
+import { runReset } from "../commands/admin/admin-reset-estrutura.js";
+import { registerParticipant } from "../services/core/eventService.js";
+import { prisma } from "../services/prisma.js";
+import { getProgressForTier } from "../services/core/promotionService.js";
+import { ChannelType } from "discord.js";
+
 export const name = "interactionCreate";
 
 export async function execute(interaction, client) {
@@ -25,7 +34,105 @@ export async function execute(interaction, client) {
         return;
     }
 
+    const eventHandled = await handleEventAnnouncementInteraction(interaction);
+    if (eventHandled) return;
+
     if (!interaction.isButton()) return;
+
+    if (interaction.customId.startsWith("evento_participar:")) {
+        const [, eventId] = interaction.customId.split(":");
+        try {
+            await registerParticipant(interaction.guild.id, eventId, interaction.user.id);
+            await interaction.reply({ content: "✅ Participação confirmada!", ephemeral: true });
+        } catch (err) {
+            await interaction.reply({ content: `❌ ${err.message}`, ephemeral: true });
+        }
+        return;
+    }
+
+    if (interaction.customId === "metas_progress") {
+        const user = await prisma.user.findUnique({
+            where: {
+                guildId_discordId: {
+                    guildId: interaction.guild.id,
+                    discordId: interaction.user.id
+                }
+            }
+        });
+        if (!user) {
+            return interaction.reply({ content: "❌ Usuário não encontrado.", ephemeral: true });
+        }
+        const progress = getProgressForTier(user);
+        return interaction.reply({
+            content:
+                `**Nível atual:** ${user.nivel}\n` +
+                `**Próximo nível:** ${progress.nextTier || "Manual"}\n\n` +
+                `Mensagens: ${progress.current.mensagens}/${progress.requirements?.mensagens ?? "-"}\n` +
+                `Eventos: ${progress.current.eventos}/${progress.requirements?.eventos ?? "-"}\n` +
+                `Recrutas: ${progress.current.recrutas}/${progress.requirements?.recrutas ?? "-"}\n` +
+                `Guerras: ${progress.current.guerras}/${progress.requirements?.war ?? "-"}`,
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId === "ticket_open") {
+        const category = interaction.guild.channels.cache.find(
+            (ch) => ch.type === ChannelType.GuildCategory && ch.name.includes("SUPORTE")
+        );
+        const adminRoles = [
+            "Administração ALTA",
+            "Administração TESTE",
+            "Dom pai da ALTA",
+            "♰ 𝚂𝚊𝚗𝚝𝚝𝚘𝚜",
+            "taki",
+            "𝑺𝒂𝒊𝒏𝒕",
+            "bielzinho.imt",
+            "!Silva safadin off",
+            "mSeven"
+        ];
+        const adminRoleIds = interaction.guild.roles.cache
+            .filter((role) => adminRoles.includes(role.name))
+            .map((role) => role.id);
+
+        const channel = await interaction.guild.channels.create({
+            name: `ticket-${interaction.user.username}`.toLowerCase(),
+            type: ChannelType.GuildText,
+            parent: category?.id,
+            permissionOverwrites: [
+                { id: interaction.guild.roles.everyone.id, deny: ["ViewChannel"] },
+                { id: interaction.user.id, allow: ["ViewChannel", "SendMessages"] },
+                ...adminRoleIds.map((id) => ({
+                    id,
+                    allow: ["ViewChannel", "SendMessages", "ManageChannels"]
+                }))
+            ]
+        });
+
+        const logChannel = interaction.guild.channels.cache.find(
+            (ch) => ch.type === ChannelType.GuildText && ch.name === "ticket-log"
+        );
+        if (logChannel?.isTextBased()) {
+            await logChannel.send(`🎫 Ticket criado por ${interaction.user.tag}: ${channel}`);
+        }
+
+        return interaction.reply({
+            content: `✅ Ticket criado: ${channel}`,
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId.startsWith("admin_reset_")) {
+        const [action, userId] = interaction.customId.split(":");
+        if (interaction.user.id !== userId) {
+            return interaction.reply({ content: "❌ Apenas o autor pode confirmar.", ephemeral: true });
+        }
+        if (action === "admin_reset_confirm") {
+            return runReset(interaction);
+        }
+        if (action === "admin_reset_cancel") {
+            return interaction.reply({ content: "❎ Reset cancelado.", ephemeral: true });
+        }
+    }
 
     // Sistema de tags - delegar para TagSystem
     if (client.tagSystem) {
@@ -58,13 +165,17 @@ export async function execute(interaction, client) {
             }
             
             // Criar embed de confirmação
-            const confirmEmbed = new EmbedBuilder()
-                .setTitle('✅ Verificação Concluída!')
-                .setDescription(`Gênero definido como: **${gender === 'male' ? 'Masculino' : 'Feminino'}**\n\nAgora você pode acessar todos os canais do servidor!`)
-                .setColor('#00ff00')
-                .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
-                .setFooter({ text: 'Bem-vindo(a) à Alta Cúpula!' })
-                .setTimestamp();
+            const confirmEmbed = buildEmbed({
+                title: '✅ Verificação Concluída!',
+                description:
+                    `Gênero definido como: **${gender === 'male' ? 'Masculino' : 'Feminino'}**\n` +
+                    'Agora você pode acessar todos os canais do servidor!',
+                fields: [
+                    { name: '👤 Usuário', value: `${interaction.user.tag}`, inline: true },
+                    { name: '🏷️ Status', value: 'Verificação concluída', inline: true }
+                ],
+                thumbnail: interaction.user.displayAvatarURL({ dynamic: true })
+            });
             
             await interaction.reply({
                 embeds: [confirmEmbed],

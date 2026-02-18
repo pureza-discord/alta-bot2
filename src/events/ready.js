@@ -1,4 +1,6 @@
 import { ActivityType } from "discord.js";
+import { initializeEventAnnouncementContainer } from "../handlers/eventAnnouncementHandler.js";
+import { initCron } from "../services/core/schedulerService.js";
 
 export const name = "ready";
 export const once = true;
@@ -14,6 +16,12 @@ export async function execute(client) {
     // Inicializar sistema de tags
     if (client.tagSystem) {
         await client.tagSystem.initialize();
+    }
+
+    await initializeEventAnnouncementContainer(client);
+
+    for (const guild of client.guilds.cache.values()) {
+        initCron(guild);
     }
 }
 

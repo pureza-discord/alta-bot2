@@ -1,11 +1,11 @@
 import { 
     PermissionsBitField, 
-    EmbedBuilder, 
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
     ActionRowBuilder 
 } from 'discord.js';
+import { buildEmbed } from '../../utils/embed.js';
 import { SERVER_CONFIG } from '../../utils/config.js';
 
 export async function execute(message, args, client) {
@@ -90,17 +90,15 @@ export async function execute(message, args, client) {
         );
         
         // Como não podemos mostrar modal em mensagem normal, vamos criar um embed explicativo
-        const embed = new EmbedBuilder()
-            .setTitle('📋 Sistema de Recrutamento')
-            .setDescription('Para configurar um recrutamento, use o comando em um canal onde o bot possa responder com um formulário interativo.')
-            .setColor('#2b2d31')
-            .addFields(
-                { name: '📝 Formato da Ficha', value: '```Recrutador : @Gustavo\nRecrutado: @Niko\nCargo/perm: Relíquia / cargo 1 estrela\nGênero : Masculino\nTotal : 1\n@Saint @taki```' },
-                { name: '📍 Canal de Fichas', value: `<#${SERVER_CONFIG.RECRUITMENT_CHANNEL}>` },
-                { name: '✅ Como usar', value: 'Use este comando em um canal de texto normal para abrir o formulário.' }
-            )
-            .setFooter({ text: 'Sistema de recrutamento automático' })
-            .setTimestamp();
+        const embed = buildEmbed({
+            title: '📋 Sistema de Recrutamento',
+            description: 'Use este comando em um canal de texto normal para abrir o formulário.',
+            fields: [
+                { name: '📝 Formato da Ficha', value: '```Recrutador : @Gustavo\nRecrutado: @Niko\nCargo/perm: Relíquia / cargo 1 estrela\nGênero : Masculino\nTotal : 1\n@Saint @taki```', inline: false },
+                { name: '📍 Canal de Fichas', value: `<#${SERVER_CONFIG.RECRUITMENT_CHANNEL}>`, inline: false },
+                { name: '✅ Como usar', value: '• Execute o comando e preencha o formulário\n• O resultado será enviado ao canal de fichas', inline: false }
+            ]
+        });
         
         await message.reply({ embeds: [embed] });
         

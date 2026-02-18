@@ -1,38 +1,51 @@
-import { EmbedBuilder } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
-    const embed = new EmbedBuilder()
-        .setTitle("📚 Central de Ajuda • Alta Cúpula")
-        .setColor("#2b2d31")
-        .setDescription("Bot profissional com sistemas avançados de segurança e moderação. Use `.` como prefixo para comandos normais e `/tag` para o sistema de tags.")
-        .addFields(
+    const embed = buildEmbed({
+        title: "🆘 Central de Ajuda — Alta Cúpula",
+        description:
+            "Bot profissional de gerenciamento, segurança e automações.\n" +
+            "Use o prefixo \".\" antes dos comandos.",
+        fields: [
             {
                 name: "🧰 Utilidade",
-                value: "`.ajuda` `.sobre` `.userinfo` `.serverinfo` `.names` `.userlog` `.online` `.impulso` `.verificartag`"
+                value:
+                    "• `.ajuda`\n• `.sobre`\n• `.userinfo`\n• `.serverinfo`\n• `.names`\n" +
+                    "• `.userlog`\n• `.online`\n• `.impulso`\n• `.verificartag`",
+                inline: false
             },
             {
                 name: "🛡️ Moderação",
-                value: "`.clear` `.ban` `.kick` `.timeout` `.untimeout` `.lock` `.unlock` `.addrole` `.removerole` `.addroleall` `.removeroleall` `.mutecall` `.unmutecall`"
+                value:
+                    "• `.clear`\n• `.ban`\n• `.kick`\n• `.timeout`\n• `.untimeout`\n" +
+                    "• `.lock`\n• `.unlock`\n• `.addrole`\n• `.removerole`\n" +
+                    "• `.addroleall`\n• `.removeroleall`\n• `.mutecall`\n• `.unmutecall`",
+                inline: false
             },
             {
-                name: "🏛️ Organização",
-                value: "`.criarcategoria` `.criartexto` `.criarvoz` `.criarcargo` `.excluircargo` `.aceitar` `.recrutamento` `.setrecrutamento`"
+                name: "🗂️ Organização",
+                value:
+                    "• `.criarcategoria`\n• `.criartexto`\n• `.criarvoz`\n• `.criarcargo`\n" +
+                    "• `.excluircargo`\n• `.aceitar`\n• `.recrutamento`\n• `.setrecrutamento`",
+                inline: false
             },
             {
-                name: "💾 Backup & Segurança",
-                value: "`.backup criar` `.backup restaurar` `.backup info`"
-            },
-            {
-                name: "🏷️ Sistema de Tags",
-                value: "Sistema automático no canal específico - Clique nos botões para receber sua tag"
+                name: "🔐 Segurança & Backup",
+                value: "• `.backup criar`\n• `.backup restaurar`\n• `.backup info`",
+                inline: false
             },
             {
                 name: "🤖 Sistemas Automáticos",
-                value: "• **AutoMod:** Detecta spam, links suspeitos e palavras proibidas\n• **Anti-Raid:** Protege contra ataques coordenados\n• **Verificação:** Sistema automático de escolha de gênero\n• **Backup:** Proteção completa do servidor"
+                value:
+                    "• AutoMod (anti-spam, links suspeitos e palavras proibidas)\n" +
+                    "• Anti-Raid (proteção contra ações suspeitas)\n" +
+                    "• Verificação (escolha de gênero)\n" +
+                    "• Backup automático do servidor",
+                inline: false
             }
-        )
-        .setFooter({ text: "Bot desenvolvido profissionalmente • Discord.js v14 • Sistemas de segurança avançados" })
-        .setTimestamp();
+        ],
+        footerText: "Alta Cúpula • Taki Bot"
+    });
 
     await message.reply({ embeds: [embed] });
 }

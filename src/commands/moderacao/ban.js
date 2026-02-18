@@ -1,4 +1,5 @@
-import { PermissionsBitField, EmbedBuilder } from "discord.js";
+import { PermissionsBitField } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { Logger } from '../../utils/logger.js';
 
 export async function execute(message, args, client) {
@@ -19,16 +20,15 @@ export async function execute(message, args, client) {
     }
 
     if (!args[0]) {
-        const helpEmbed = new EmbedBuilder()
-            .setTitle("📋 Como usar o comando ban")
-            .setDescription("Use este comando para banir um membro do servidor.")
-            .addFields(
-                { name: "📝 Sintaxe", value: "`.ban <@membro|ID> [motivo]`" },
-                { name: "📖 Exemplos", value: "`.ban @usuário Spam nas mensagens`\n`.ban 123456789 Comportamento inadequado`" },
-                { name: "⚠️ Observações", value: "• O motivo é opcional\n• Você precisa ter cargo superior ao alvo\n• O bot precisa ter cargo superior ao alvo" }
-            )
-            .setColor("#2b2d31")
-            .setTimestamp();
+        const helpEmbed = buildEmbed({
+            title: "📋 Como usar o comando ban",
+            description: "Use este comando para banir um membro do servidor.",
+            fields: [
+                { name: "📝 Sintaxe", value: "• `.ban <@membro|ID> [motivo]`", inline: false },
+                { name: "📖 Exemplos", value: "• `.ban @usuário Spam nas mensagens`\n• `.ban 123456789 Comportamento inadequado`", inline: false },
+                { name: "⚠️ Observações", value: "• O motivo é opcional\n• Você precisa ter cargo superior ao alvo\n• O bot precisa ter cargo superior ao alvo", inline: false }
+            ]
+        });
         
         return message.reply({ embeds: [helpEmbed] });
     }
@@ -94,15 +94,14 @@ export async function execute(message, args, client) {
 
     try {
         // Tentar enviar DM antes de banir
-        const dmEmbed = new EmbedBuilder()
-            .setTitle("🔨 Você foi banido")
-            .setDescription(`Você foi banido do servidor **${message.guild.name}**.`)
-            .addFields(
+        const dmEmbed = buildEmbed({
+            title: "🔨 Você foi banido",
+            description: `Você foi banido do servidor **${message.guild.name}**.`,
+            fields: [
                 { name: "👮 Moderador", value: message.author.tag, inline: true },
                 { name: "📝 Motivo", value: motivo, inline: false }
-            )
-            .setColor("#ff0000")
-            .setTimestamp();
+            ]
+        });
 
         await member.send({ embeds: [dmEmbed] }).catch(() => {
             console.log(`Não foi possível enviar DM para ${member.user.tag}`);
@@ -133,14 +132,13 @@ export async function execute(message, args, client) {
     } catch (error) {
         console.error("Erro ao banir membro:", error);
         
-        const errorEmbed = new EmbedBuilder()
-            .setTitle("❌ Erro ao Banir")
-            .setDescription("Ocorreu um erro ao tentar banir o membro.")
-            .addFields(
-                { name: "🔍 Possíveis causas", value: "• Falta de permissões\n• Hierarquia de cargos\n• Erro interno do Discord" }
-            )
-            .setColor("#ff0000")
-            .setTimestamp();
+        const errorEmbed = buildEmbed({
+            title: "❌ Erro ao Banir",
+            description: "Ocorreu um erro ao tentar banir o membro.",
+            fields: [
+                { name: "🔍 Possíveis causas", value: "• Falta de permissões\n• Hierarquia de cargos\n• Erro interno do Discord", inline: false }
+            ]
+        });
         
         await message.reply({ embeds: [errorEmbed] }).catch(() => {});
     }

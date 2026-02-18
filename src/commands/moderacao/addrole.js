@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
@@ -31,15 +32,16 @@ export async function execute(message, args, client) {
     try {
         await member.roles.add(role);
 
-        const embed = new EmbedBuilder()
-            .setTitle("➕ Cargo Adicionado")
-            .setColor(role.color || "#2b2d31")
-            .addFields(
+        const embed = buildEmbed({
+            title: "➕ Cargo Adicionado",
+            description: "Alteração de cargo registrada com sucesso.",
+            fields: [
                 { name: "👤 Membro", value: `${member.user.tag}`, inline: true },
                 { name: "🎭 Cargo", value: `${role}`, inline: true },
                 { name: "👮 Moderador", value: `${message.author.tag}`, inline: true }
-            )
-            .setTimestamp();
+            ],
+            color: role.color || undefined
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {

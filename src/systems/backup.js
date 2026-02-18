@@ -1,4 +1,5 @@
-import { EmbedBuilder, PermissionsBitField, ChannelType } from 'discord.js';
+import { PermissionsBitField, ChannelType } from 'discord.js';
+import { buildEmbed } from '../utils/embed.js';
 import { db } from '../database.js';
 import { Logger } from '../utils/logger.js';
 
@@ -385,15 +386,15 @@ export class BackupSystem {
     }
     
     createBackupEmbed(guild, info) {
-        const embed = new EmbedBuilder()
-            .setTitle('📦 Informações do Backup')
-            .setColor('#2b2d31')
-            .addFields(
+        const embed = buildEmbed({
+            title: '📦 Informações do Backup',
+            description: 'Resumo do último backup registrado.',
+            fields: [
                 { name: '🏛️ Servidor', value: guild.name, inline: true },
                 { name: '📁 Canais', value: info.channels.toString(), inline: true },
                 { name: '👑 Cargos', value: info.roles.toString(), inline: true }
-            )
-            .setTimestamp();
+            ]
+        });
         
         if (info.lastBackup) {
             embed.addFields({

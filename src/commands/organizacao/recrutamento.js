@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 import { db } from "../../database.js";
 
 export async function execute(message, args, client) {
@@ -41,17 +42,16 @@ export async function execute(message, args, client) {
                 lista += `\n... e mais ${rows.length - 10} membro(s)`;
             }
 
-            const embed = new EmbedBuilder()
-                .setTitle(`📊 Estatísticas de Recrutamento - ${membro.username}`)
-                .setThumbnail(membro.displayAvatarURL({ size: 1024 }))
-                .setColor("#2b2d31")
-                .addFields(
+            const embed = buildEmbed({
+                title: `📊 Estatísticas de Recrutamento — ${membro.username}`,
+                description: "Resumo de aprovações registradas.",
+                fields: [
                     { name: "👥 Membros aprovados", value: `${membrosAprovados}`, inline: true },
                     { name: "✅ Total de aprovações", value: `${totalAprovacoes}`, inline: true },
                     { name: "📋 Lista", value: lista || "Nenhum membro aprovado", inline: false }
-                )
-                .setFooter({ text: `Solicitado por ${message.author.tag}` })
-                .setTimestamp();
+                ],
+                thumbnail: membro.displayAvatarURL({ size: 1024 })
+            });
 
             await message.reply({ embeds: [embed] });
         }

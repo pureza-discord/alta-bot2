@@ -1,4 +1,5 @@
-import { PermissionFlagsBits, EmbedBuilder } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { buildEmbed } from "../../utils/embed.js";
 
 export async function execute(message, args, client) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
@@ -23,11 +24,13 @@ export async function execute(message, args, client) {
         const nomeCargo = role.name;
         await role.delete(`Excluído por ${message.author.tag}`);
 
-        const embed = new EmbedBuilder()
-            .setTitle("🗑️ Cargo Excluído")
-            .setDescription(`O cargo **${nomeCargo}** foi excluído com sucesso!`)
-            .setColor("#ff0000")
-            .setTimestamp();
+        const embed = buildEmbed({
+            title: "🗑️ Cargo Excluído",
+            description: `O cargo **${nomeCargo}** foi excluído com sucesso.`,
+            fields: [
+                { name: "👮 Moderador", value: `${message.author.tag}`, inline: true }
+            ]
+        });
 
         await message.reply({ embeds: [embed] });
     } catch (error) {
