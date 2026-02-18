@@ -7,6 +7,7 @@ import { getAuditLogs } from "./core/auditLogService.js";
 import { createContract, getActiveContracts } from "./core/contractService.js";
 import { getActiveDistrictMissions } from "./core/missionService.js";
 import { grantVip, revokeVip } from "./core/vipService.js";
+import { applyPunishment } from "./core/punishmentService.js";
 
 export function initInternalApi(client) {
     const app = express();
@@ -94,6 +95,22 @@ export function initInternalApi(client) {
         if (!guild) return res.status(404).json({ error: "Guild not found" });
         const vip = await revokeVip(guild, guildId, userId, "admin");
         return res.json({ ok: true, vip });
+    });
+
+    app.post("/internal/punish", async (req, res) => {
+        const { guildId, userId, type, duration, reason, amount } = req.body;
+        if (!guildId || !userId || !type) {
+            return res.status(400).json({ error: "guildId, userId and type are required" });
+        }
+        const punishment = await applyPunishment(
+            guildId,
+            userId,
+            type,
+            duration || null,
+            reason || null,
+            amount || null
+        );
+        return res.json({ ok: true, punishment });
     });
 
     app.post("/internal/reset-season", async (req, res) => {

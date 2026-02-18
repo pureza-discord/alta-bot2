@@ -14,12 +14,17 @@ export const data = new SlashCommandBuilder()
             .addChoices(
                 { name: "warning", value: "warning" },
                 { name: "influence_loss", value: "influence_loss" },
-                { name: "xp_block", value: "xp_block" }
+                { name: "xp_block", value: "xp_block" },
+                { name: "ranking_block", value: "ranking_block" },
+                { name: "economy_fine", value: "economy_fine" }
             )
             .setRequired(true)
     )
     .addIntegerOption((opt) =>
         opt.setName("duracao").setDescription("Duração em minutos (opcional)")
+    )
+    .addIntegerOption((opt) =>
+        opt.setName("valor").setDescription("Valor da penalidade (opcional)")
     )
     .addStringOption((opt) => opt.setName("motivo").setDescription("Motivo"))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
@@ -37,9 +42,10 @@ export async function execute(interaction) {
     const user = interaction.options.getUser("usuario", true);
     const type = interaction.options.getString("tipo", true);
     const duration = interaction.options.getInteger("duracao") || null;
+    const amount = interaction.options.getInteger("valor") || null;
     const reason = interaction.options.getString("motivo") || null;
 
-    await applyPunishment(interaction.guild.id, user.id, type, duration, reason);
+    await applyPunishment(interaction.guild.id, user.id, type, duration, reason, amount);
 
     return interaction.reply({
         content: `✅ Punição aplicada em ${user}: ${type}`,

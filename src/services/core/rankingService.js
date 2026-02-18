@@ -1,4 +1,10 @@
 import { prisma } from "../prisma.js";
+import { getBlockedUserIds } from "./punishmentService.js";
+
+async function buildUserFilter(guildId) {
+    const blocked = await getBlockedUserIds(guildId, "ranking_block");
+    return blocked.length > 0 ? { discordId: { notIn: blocked } } : {};
+}
 
 export async function getDistrictRankingByPoints(guildId, limit = 10) {
     return prisma.distrito.findMany({
@@ -9,32 +15,36 @@ export async function getDistrictRankingByPoints(guildId, limit = 10) {
 }
 
 export async function getTopMessages(guildId, limit = 10) {
+    const filter = await buildUserFilter(guildId);
     return prisma.user.findMany({
-        where: { guildId },
+        where: { guildId, ...filter },
         orderBy: { mensagens: "desc" },
         take: limit
     });
 }
 
 export async function getTopInfluence(guildId, limit = 10) {
+    const filter = await buildUserFilter(guildId);
     return prisma.user.findMany({
-        where: { guildId },
+        where: { guildId, ...filter },
         orderBy: { influencia: "desc" },
         take: limit
     });
 }
 
 export async function getTopRecruits(guildId, limit = 10) {
+    const filter = await buildUserFilter(guildId);
     return prisma.user.findMany({
-        where: { guildId },
+        where: { guildId, ...filter },
         orderBy: { recrutas: "desc" },
         take: limit
     });
 }
 
 export async function getTopEvents(guildId, limit = 10) {
+    const filter = await buildUserFilter(guildId);
     return prisma.user.findMany({
-        where: { guildId },
+        where: { guildId, ...filter },
         orderBy: { eventos: "desc" },
         take: limit
     });

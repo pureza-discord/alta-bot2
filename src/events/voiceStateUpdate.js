@@ -1,4 +1,5 @@
 import { db } from "../database.js";
+import { addVoiceXP } from "../services/xpService.js";
 
 export const name = "voiceStateUpdate";
 
@@ -46,6 +47,9 @@ export function execute(oldState, newState) {
                         if (err) console.error("Erro ao atualizar tempo em call:", err);
                     }
                 );
+                addVoiceXP(user.id, guild.id, tempo).catch((error) => {
+                    console.error("Erro ao adicionar XP por call:", error);
+                });
             }
         );
     }

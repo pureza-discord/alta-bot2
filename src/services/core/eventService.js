@@ -5,6 +5,7 @@ import { checkPromotion } from "./promotionService.js";
 import { logger } from "../../utils/logger.js";
 import { logAudit } from "./auditLogService.js";
 import { addDistrictMissionProgress } from "./missionService.js";
+import { addEventXP } from "../xpService.js";
 
 export async function createEvent(guildId, nome, criadoPor) {
     const event = await prisma.evento.create({
@@ -59,6 +60,7 @@ export async function finalizeEvent(guildId, eventId, vencedorId, distritoId, gu
     await addEventParticipation(guildId, vencedorId, 1);
     await addInfluence(guildId, vencedorId, 5);
     await addMoney(guildId, vencedorId, 25);
+    await addEventXP(vencedorId, guildId, 50);
     if (distritoId) {
         await addWarPoints(guildId, distritoId, 10);
         await addDistrictMissionProgress(guildId, distritoId, "season_events", 1);

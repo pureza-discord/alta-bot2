@@ -10,9 +10,19 @@ import { getVipStatus } from "./core/vipService.js";
 const MESSAGE_XP = 8;
 const COOLDOWN_MS = 30 * 1000;
 const cooldowns = new Map();
+const MAX_LEVEL_FOR_BONUS = 50;
+const LEVEL_XP_BONUS = 0.03;
+const VOICE_XP_PER_MINUTE = 2;
 
 function getLevelXpRequirement(level) {
-    return 150 * level * level + 500;
+    const rawFormula = config.xpFormula || "150 * level * level + 500";
+    const formula = rawFormula.replace(/\^/g, "**");
+    try {
+        // eslint-disable-next-line no-new-func
+        return Function("level", `return ${formula}`)(level);
+    } catch {
+        return 150 * level * level + 500;
+    }
 }
 
 export function calculateLevel(xpTotal) {
@@ -39,7 +49,10 @@ export async function addMessageXP(userId, guildId) {
 
     const previous = await User.findOne({ userId, guildId });
     const vip = await getVipStatus(guildId, userId);
-    const awardedXp = vip.active ? Math.ceil(MESSAGE_XP * 1.2) : MESSAGE_XP;
+    const currentLevel = previous?.level || 0;
+    const bonusLevel = Math.min(currentLevel, MAX_LEVEL_FOR_BONUS);
+    const baseXp = MESSAGE_XP * (1 + bonusLevel * LEVEL_XP_BONUS);
+    const awardedXp = vip.active ? Math.ceil(baseXp * 1.2) : Math.ceil(baseXp);
     const user = await User.findOneAndUpdate(
         { userId, guildId },
         {
@@ -81,6 +94,39 @@ export async function addMessageXP(userId, guildId) {
     return { awarded: true, levelUp: levelResult.leveledUp, user };
 }
 
+export async function addEventXP(userId, guildId, baseXp = 50) {
+    const blocked = await checkIfBlocked(guildId, userId);
+    if (blocked) {
+        return { awarded: false, reason: "blocked" };
+    }
+
+    const current = await User.findOne({ userId, guildId });
+    const currentLevel = current?.level || 0;
+    const bonusLevel = Math.min(currentLevel, MAX_LEVEL_FOR_BONUS);
+    const baseAward = baseXp * (1 + bonusLevel * LEVEL_XP_BONUS);
+
+    const vip = await getVipStatus(guildId, userId);
+    const awardedXp = vip.active ? Math.ceil(baseAward * 1.2) : Math.ceil(baseAward);
+
+    const user = await User.findOneAndUpdate(
+        { userId, guildId },
+        {
+            $inc: {
+                xpTotal: awardedXp,
+                weeklyXP: awardedXp,
+                seasonalXP: awardedXp
+            },
+            $setOnInsert: { userId, guildId }
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    const levelResult = await checkLevelUp(user);
+    await registerTopXp(userId, awardedXp);
+
+    return { awarded: true, levelUp: levelResult.leveledUp, user, awardedXp };
+}
+
 export async function checkLevelUp(user) {
     const newLevel = calculateLevel(user.xpTotal);
     if (newLevel > user.level) {
@@ -90,6 +136,44 @@ export async function checkLevelUp(user) {
         return { leveledUp: true, level: newLevel };
     }
     return { leveledUp: false, level: user.level };
+}
+
+export async function addVoiceXP(userId, guildId, secondsInCall) {
+    const blocked = await checkIfBlocked(guildId, userId);
+    if (blocked) {
+        return { awarded: false, reason: "blocked" };
+    }
+
+    const minutes = Math.floor(secondsInCall / 60);
+    if (minutes <= 0) {
+        return { awarded: false, reason: "too_short" };
+    }
+
+    const current = await User.findOne({ userId, guildId });
+    const currentLevel = current?.level || 0;
+    const bonusLevel = Math.min(currentLevel, MAX_LEVEL_FOR_BONUS);
+    const baseXp = VOICE_XP_PER_MINUTE * minutes * (1 + bonusLevel * LEVEL_XP_BONUS);
+
+    const vip = await getVipStatus(guildId, userId);
+    const awardedXp = vip.active ? Math.ceil(baseXp * 1.2) : Math.ceil(baseXp);
+
+    const user = await User.findOneAndUpdate(
+        { userId, guildId },
+        {
+            $inc: {
+                xpTotal: awardedXp,
+                weeklyXP: awardedXp,
+                seasonalXP: awardedXp
+            },
+            $setOnInsert: { userId, guildId }
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    const levelResult = await checkLevelUp(user);
+    await registerTopXp(userId, awardedXp);
+
+    return { awarded: true, levelUp: levelResult.leveledUp, user, minutes, awardedXp };
 }
 
 export async function updateHierarchy(member, level) {
